@@ -1,0 +1,10 @@
+{
+  "description": "Facilitates institutional teacher evaluations by allowing students to securely log in, complete course surveys, and receive submission confirmations.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
