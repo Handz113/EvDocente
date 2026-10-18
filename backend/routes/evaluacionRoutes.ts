@@ -24,31 +24,37 @@ router.post(
  * GET /api/evaluaciones/promedio/:docenteId
  * Calcula y retorna el promedio aritmético, total de evaluaciones,
  * clasificación de desempeño y estatus de asignación de materias del docente.
+ * Restringido a Administradores y Coordinadores.
  * Soporta filtro opcional por ciclo/periodo: ?periodo=... o ?id_ciclo=...
  */
 router.get(
   '/promedio/:docenteId',
   verificarToken,
+  verificarRol(['Administrador', 'Coordinador']),
   obtenerPromedioDocente
 );
 
 /**
  * GET /api/evaluaciones/docente/:id/desempeno
- * Ruta RESTful complementaria para la consulta de desempeño docente
+ * Ruta RESTful complementaria para la consulta de desempeño docente.
+ * Restringido a Administradores y Coordinadores.
  */
 router.get(
   '/docente/:id/desempeno',
   verificarToken,
+  verificarRol(['Administrador', 'Coordinador']),
   calcularDesempenoDocente
 );
 
 /**
  * GET /api/evaluaciones/docente/:docenteId
- * Ruta RESTful directa para consulta de evaluaciones por ID de docente
+ * Ruta RESTful directa para consulta de evaluaciones por ID de docente.
+ * Restringido a Administradores y Coordinadores.
  */
 router.get(
   '/docente/:docenteId',
   verificarToken,
+  verificarRol(['Administrador', 'Coordinador']),
   obtenerPromedioDocente
 );
 
