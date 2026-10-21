@@ -1,0 +1,212 @@
+/* ================= Variables de color ================= */
+:root {
+  --fondo: #f4f6fb;
+  --tarjeta: #ffffff;
+  --texto: #1c2333;
+  --texto-suave: #5d6678;
+  --borde: #e2e6ef;
+  --primario: #2557d6;      /* alumnos */
+  --primario-suave: #e8eefc;
+  --personal: #0f766e;      /* personal */
+  --personal-suave: #e3f4f2;
+  --ok: #15803d;
+  --medio: #d97706;
+  --bajo: #dc2626;
+  --radio: 14px;
+  --sombra: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 16px rgba(16, 24, 40, .06);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+}
+h1, h2, h3 { margin: 0 0 .4em; line-height: 1.2; }
+p { margin: 0 0 1em; }
+.suave { color: var(--texto-suave); }
+
+/* El color principal cambia según la interfaz */
+.tono-alumno { --acento: var(--primario); --acento-suave: var(--primario-suave); }
+.tono-personal { --acento: var(--personal); --acento-suave: var(--personal-suave); }
+
+/* ================= Botones y campos ================= */
+.btn {
+  border: 0; border-radius: 10px; padding: .7rem 1.2rem;
+  font: inherit; font-weight: 600; cursor: pointer;
+  background: var(--acento); color: #fff;
+  transition: filter .15s, transform .05s;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-bloque { width: 100%; }
+.btn-fantasma { background: transparent; color: var(--texto-suave); border: 1px solid var(--borde); }
+.btn-chico { padding: .4rem .8rem; font-size: .85rem; }
+.btn-peligro { background: var(--bajo); }
+
+.campo { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1rem; }
+.campo label { font-size: .9rem; font-weight: 600; }
+.campo input, .campo select, .campo textarea, select.filtro {
+  font: inherit; padding: .65rem .8rem; border: 1px solid var(--borde);
+  border-radius: 10px; background: #fff; color: var(--texto);
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus {
+  outline: 2px solid var(--acento-suave); border-color: var(--acento);
+}
+.error { color: var(--bajo); font-size: .9rem; margin-bottom: 1rem; }
+.ayuda { font-size: .82rem; color: var(--texto-suave); }
+
+/* ================= Pantallas de login ================= */
+.pantalla-centro {
+  min-height: 100vh; display: grid; place-items: center; padding: 1.5rem;
+  background: linear-gradient(160deg, var(--acento-suave), var(--fondo) 60%);
+}
+.caja-login {
+  width: 100%; max-width: 420px; background: var(--tarjeta);
+  border-radius: 20px; padding: 2rem; box-shadow: var(--sombra);
+}
+.caja-login.ancha { max-width: 560px; }
+.encabezado-login { text-align: center; margin-bottom: 1.5rem; }
+.logo {
+  display: inline-grid; place-items: center; width: 42px; height: 42px;
+  border-radius: 12px; background: var(--acento); color: #fff; font-weight: 700;
+}
+.encabezado-login .logo { width: 56px; height: 56px; font-size: 1.2rem; margin-bottom: .8rem; }
+.aviso-anonimo {
+  display: flex; gap: .6rem; align-items: flex-start;
+  background: var(--acento-suave); border-radius: 10px; padding: .8rem;
+  font-size: .88rem; margin-bottom: 1.2rem;
+}
+.volver { display: inline-block; margin-top: 1.2rem; color: var(--texto-suave); font-size: .9rem; text-decoration: none; }
+.volver:hover { color: var(--acento); }
+
+/* Opciones de área dentro del recuadro (login de personal) */
+.opciones-area { display: grid; gap: .8rem; }
+.opcion-area {
+  display: flex; align-items: center; gap: 1rem; text-align: left;
+  border: 1px solid var(--borde); border-radius: 14px; padding: 1rem;
+  background: #fff; cursor: pointer; font: inherit; color: inherit;
+  transition: border-color .15s, background .15s;
+}
+.opcion-area:hover { border-color: var(--acento); background: var(--acento-suave); }
+.opcion-area .icono {
+  width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--acento-suave); color: var(--acento); font-size: 1.3rem; flex-shrink: 0;
+}
+.opcion-area strong { display: block; }
+.opcion-area small { color: var(--texto-suave); }
+.opcion-area .flecha { margin-left: auto; color: var(--texto-suave); }
+
+/* Bienvenida */
+.dos-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.opcion-grande {
+  border: 1px solid var(--borde); border-radius: 16px; padding: 1.4rem 1rem; text-align: center;
+  background: #fff; cursor: pointer; font: inherit; color: inherit;
+}
+.opcion-grande:hover { box-shadow: var(--sombra); }
+.opcion-grande .icono { font-size: 2rem; display: block; margin-bottom: .5rem; }
+.opcion-grande.alumno:hover { border-color: var(--primario); }
+.opcion-grande.personal:hover { border-color: var(--personal); }
+
+/* ================= Layout con barra superior ================= */
+.app { min-height: 100vh; }
+.topbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: .8rem 1.5rem; background: var(--tarjeta); border-bottom: 1px solid var(--borde);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-izq { display: flex; align-items: center; gap: .8rem; }
+.topbar-izq small { display: block; color: var(--texto-suave); font-size: .8rem; }
+.topbar-der { display: flex; align-items: center; gap: 1rem; }
+.usuario-nombre { font-size: .9rem; color: var(--texto-suave); }
+
+.pestañas {
+  display: flex; gap: .3rem; padding: 0 1.5rem; background: var(--tarjeta);
+  border-bottom: 1px solid var(--borde); overflow-x: auto;
+}
+.pestaña {
+  border: 0; background: none; font: inherit; padding: .9rem 1rem; cursor: pointer;
+  color: var(--texto-suave); border-bottom: 2px solid transparent; white-space: nowrap;
+}
+.pestaña.activa { color: var(--acento); border-bottom-color: var(--acento); font-weight: 600; }
+
+.contenido { max-width: 1100px; margin: 0 auto; padding: 1.8rem 1.5rem 3rem; }
+
+/* ================= Tarjetas y rejillas ================= */
+.tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 1.3rem; box-shadow: var(--sombra); }
+.rejilla { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.kpis { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 1.5rem; }
+.kpi .numero { font-size: 2rem; font-weight: 700; color: var(--acento); }
+.kpi .etiqueta { font-size: .85rem; color: var(--texto-suave); }
+.seccion { margin-bottom: 2rem; }
+.fila-titulo { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+/* Tarjeta de materia (alumno) */
+.materia { display: flex; flex-direction: column; gap: .3rem; }
+.materia .crn { font-size: .8rem; color: var(--texto-suave); }
+.materia .docente { color: var(--texto-suave); font-size: .92rem; margin-bottom: .8rem; }
+.materia .btn { margin-top: auto; }
+.etiqueta-estado {
+  align-self: flex-start; font-size: .75rem; font-weight: 600; padding: .2rem .6rem; border-radius: 99px;
+}
+.etiqueta-estado.pendiente { background: #fff4e5; color: var(--medio); }
+.etiqueta-estado.lista { background: #e7f6ec; color: var(--ok); }
+
+.progreso { height: 8px; background: var(--borde); border-radius: 99px; overflow: hidden; margin: .6rem 0 1.5rem; }
+.progreso div { height: 100%; background: var(--acento); transition: width .3s; }
+
+/* ================= Formulario de evaluación ================= */
+.pregunta { margin-bottom: 1rem; }
+.pregunta .categoria { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--acento); font-weight: 600; }
+.pregunta p { font-weight: 500; margin: .3rem 0 .8rem; }
+.escala { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; }
+.escala label {
+  display: flex; flex-direction: column; align-items: center; gap: .3rem; text-align: center;
+  border: 1px solid var(--borde); border-radius: 10px; padding: .6rem .3rem; cursor: pointer;
+  font-size: .75rem; color: var(--texto-suave);
+}
+.escala label strong { font-size: 1.1rem; color: var(--texto); }
+.escala input { display: none; }
+.escala label.elegida { border-color: var(--acento); background: var(--acento-suave); color: var(--acento); }
+.escala label.elegida strong { color: var(--acento); }
+.acciones { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; }
+
+/* ================= Barras de resultados ================= */
+.barra { position: relative; height: 26px; background: var(--fondo); border-radius: 8px; overflow: hidden; }
+.barra-relleno { height: 100%; border-radius: 8px; }
+.barra-relleno.alto { background: #bbe5c8; }
+.barra-relleno.medio { background: #fde3b4; }
+.barra-relleno.bajo { background: #fbc5c5; }
+.barra-valor { position: absolute; right: .6rem; top: 50%; transform: translateY(-50%); font-weight: 600; font-size: .85rem; }
+.fila-barra { display: grid; grid-template-columns: 180px 1fr; gap: 1rem; align-items: center; margin-bottom: .6rem; font-size: .9rem; }
+
+.comentario { padding: .8rem 1rem; background: var(--fondo); border-radius: 10px; margin-bottom: .6rem; font-size: .92rem; }
+
+/* ================= Tablas ================= */
+.tabla-envoltura { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: .75rem .8rem; border-bottom: 1px solid var(--borde); }
+th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-suave); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+.filtros { display: flex; gap: .8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.chip { display: inline-block; font-size: .78rem; padding: .2rem .6rem; border-radius: 99px; background: var(--acento-suave); color: var(--acento); font-weight: 600; }
+
+.vacio { text-align: center; padding: 2rem; color: var(--texto-suave); }
+.exito { text-align: center; }
+.exito .icono-ok {
+  width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 1rem; display: grid; place-items: center;
+  background: #e7f6ec; color: var(--ok); font-size: 2rem;
+}
+
+/* ================= Celular ================= */
+@media (max-width: 640px) {
+  .topbar { padding: .7rem 1rem; }
+  .usuario-nombre { display: none; }
+  .contenido { padding: 1.2rem 1rem 2rem; }
+  .dos-opciones { grid-template-columns: 1fr; }
+  .escala label span { display: none; }
+  .fila-barra { grid-template-columns: 1fr; gap: .3rem; }
+  .caja-login { padding: 1.5rem; }
+}
