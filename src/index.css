@@ -8,6 +8,39 @@
   --color-institutional-light: #e8eef5;
   --font-poppins: 'Poppins', sans-serif;
   --font-inter: 'Inter', sans-serif;
+
+  /* Global variables from interfaz-evaluacion */
+  --fondo: #f4f6fb;
+  --tarjeta: #ffffff;
+  --texto: #1c2333;
+  --texto-suave: #5d6678;
+  --borde: #e2e6ef;
+  --primario: #2557d6;
+  --primario-suave: #e8eefc;
+  --personal: #0f766e;
+  --personal-suave: #e3f4f2;
+  --ok: #15803d;
+  --medio: #d97706;
+  --bajo: #dc2626;
+  --radio: 14px;
+  --sombra: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 16px rgba(16, 24, 40, .06);
+}
+
+:root {
+  --fondo: #f4f6fb;
+  --tarjeta: #ffffff;
+  --texto: #1c2333;
+  --texto-suave: #5d6678;
+  --borde: #e2e6ef;
+  --primario: #2557d6;
+  --primario-suave: #e8eefc;
+  --personal: #0f766e;
+  --personal-suave: #e3f4f2;
+  --ok: #15803d;
+  --medio: #d97706;
+  --bajo: #dc2626;
+  --radio: 14px;
+  --sombra: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 16px rgba(16, 24, 40, .06);
 }
 
 * {
@@ -15,8 +48,9 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: #f2f2f2;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--fondo);
+  color: var(--texto);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -30,6 +64,6 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #c0c0c0; }
 
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
   outline: none;
 }
