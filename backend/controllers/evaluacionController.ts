@@ -2,24 +2,37 @@ import { Request, Response } from 'express';
 import pool from '../config/db';
 
 export const crearEvaluacion = async (req: Request, res: Response): Promise<void> => {
+  const idAlumno = (req as any).user?.id || (req as any).user?.matricula;
+  const { crn, calificaciones } = req.body;
+
+  if (!crn || !calificaciones || !Array.isArray(calificaciones) || calificaciones.length !== 15) {
+    res.status(400).json({
+      mensaje: 'Datos inválidos. Se requiere el CRN de la clase y un arreglo exactamente con 15 calificaciones.'
+    });
+    return;
+  }
+
+  // Validación estricta de escala según restricción CHECK (valor IN (0, 2.5, 5, 7.5, 10))
+  const VALORES_PERMITIDOS = [0, 2.5, 5, 7.5, 10];
+  const calificacionesValidas = calificaciones.every(
+    (v: any) => typeof v === 'number' && !Number.isNaN(v) && VALORES_PERMITIDOS.includes(v)
+  );
+
+  if (!calificacionesValidas) {
+    res.status(400).json({
+      mensaje: 'Calificaciones inválidas. Solo se permiten los valores 0, 2.5, 5, 7.5 y 10 en la escala de evaluación.'
+    });
+    return;
+  }
+
+  if (!idAlumno) {
+    res.status(401).json({ mensaje: 'No se pudo identificar al alumno en la petición.' });
+    return;
+  }
+
   const client = await pool.connect();
 
   try {
-    const idAlumno = (req as any).user?.id || (req as any).user?.matricula;
-    const { crn, calificaciones } = req.body;
-
-    if (!crn || !calificaciones || !Array.isArray(calificaciones) || calificaciones.length !== 15) {
-      res.status(400).json({
-        mensaje: 'Datos inválidos. Se requiere el CRN de la clase y un arreglo exactamente con 15 calificaciones.'
-      });
-      return;
-    }
-
-    if (!idAlumno) {
-      res.status(401).json({ mensaje: 'No se pudo identificar al alumno en la petición.' });
-      return;
-    }
-
     await client.query('BEGIN');
 
     // 2. Usar los nombres reales: Evaluacion, id_alumno, id_crn
