@@ -1,3 +1,6 @@
+-- Los archivos están en UTF-8: evita acentos rotos al cargarlos desde la consola de Windows
+SET client_encoding = 'UTF8';
+
 -- =========================================================
 -- DATOS DE PRUEBA PARA LA INTEGRACIÓN FRONT ↔ BACK
 -- Ejecutar DESPUÉS de sql/carga_inicial.sql:
