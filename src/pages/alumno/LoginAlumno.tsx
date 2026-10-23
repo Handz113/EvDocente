@@ -1,31 +1,35 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, Link } from '../../router'
 import { useAuth } from '../../context/AuthContext'
+import { iniciarSesionAPI } from '../../services/evaluacionService'
 
 export default function LoginAlumno() {
-  const [matricula, setMatricula] = useState('ALU001')
-  const [contraseña, setContraseña] = useState('demo123')
+  const [matricula, setMatricula] = useState('')
+  const [contraseña, setContraseña] = useState('')
   const [error, setError] = useState('')
+  const [enviando, setEnviando] = useState(false)
   const { iniciarSesion } = useAuth()
   const navigate = useNavigate()
 
-  const entrar = (e: FormEvent) => {
+  const entrar = async (e: FormEvent) => {
     e.preventDefault()
     if (!matricula.trim() || !contraseña.trim()) {
       setError('Por favor, ingresa tu matrícula y contraseña.')
       return
     }
 
-    // Usar identificador y token seguro institucional compatible con backend/generarToken.ts
-    // Se genera o asigna la sesión de alumno
-    iniciarSesion({
-      rol: 'alumno',
-      id: 1,
-      matricula: matricula.trim(),
-      nombre: 'Alumno Institucional',
-      token: 'jwt_alumno_token_demo',
-    })
-    navigate('/alumno/inicio')
+    setEnviando(true)
+    setError('')
+    try {
+      // POST /api/auth/login — el backend valida contra la BD y devuelve el JWT
+      const { token, usuario } = await iniciarSesionAPI(matricula.trim(), contraseña, 'alumno')
+      iniciarSesion({ ...usuario, token })
+      navigate('/alumno/inicio')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -58,7 +62,7 @@ export default function LoginAlumno() {
             type="text"
             value={matricula}
             onChange={(e) => setMatricula(e.target.value)}
-            placeholder="Ej. ALU001 o 010101"
+            placeholder="Ej. ALU001 o tu correo institucional"
             className="w-full px-3.5 py-2.5 rounded-xl border border-[#e2e6ef] bg-white text-sm focus:border-[#2557d6] focus:ring-2 focus:ring-[#2557d6]/20 transition-all"
             autoFocus
           />
@@ -82,13 +86,14 @@ export default function LoginAlumno() {
 
         <button
           type="submit"
-          className="w-full py-3 rounded-xl bg-[#2557d6] hover:bg-[#1f47b2] text-white font-semibold text-sm shadow-md transition-all cursor-pointer"
+          disabled={enviando}
+          className="w-full py-3 rounded-xl bg-[#2557d6] hover:bg-[#1f47b2] text-white font-semibold text-sm shadow-md transition-all cursor-pointer disabled:opacity-60"
         >
-          Iniciar sesión
+          {enviando ? 'Entrando...' : 'Iniciar sesión'}
         </button>
 
         <p className="text-xs text-[#5d6678] text-center mt-4">
-          Demo: matrícula <strong className="text-[#1c2333]">ALU001</strong> o <strong className="text-[#1c2333]">010101</strong>
+          Prueba: <strong className="text-[#1c2333]">ALU001</strong> / <strong className="text-[#1c2333]">demo123</strong>
         </p>
 
         <div className="text-center mt-5">

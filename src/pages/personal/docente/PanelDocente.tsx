@@ -2,65 +2,47 @@ import { useState, useEffect } from 'react'
 import Layout from '../../../components/Layout'
 import Barra from '../../../components/Barra'
 import { useAuth } from '../../../context/AuthContext'
+import { useNavigate } from '../../../router'
 import {
-  MATERIAS_CATALOGO,
-  PREGUNTAS_INSTITUCIONALES,
-  obtenerPromedioDocenteAPI,
+  obtenerMiPromedioAPI,
+  obtenerMisResultadosAPI,
+  ErrorAPI,
   type ClasificacionDocenteAPI,
+  type GrupoResultados,
 } from '../../../services/evaluacionService'
 
 export default function PanelDocente() {
-  const { usuario } = useAuth()
-  const docenteIdNumerico = usuario?.docenteId ? parseInt(usuario.docenteId, 10) : 1
+  const { usuario, cerrarSesion } = useAuth()
+  const navigate = useNavigate()
 
-  const misGrupos = MATERIAS_CATALOGO.filter(
-    (m) => m.docenteId === String(docenteIdNumerico)
-  )
-
-  const [crn, setCrn] = useState<string>(misGrupos[0]?.crn || '40211')
+  const [misGrupos, setMisGrupos] = useState<GrupoResultados[]>([])
+  const [crn, setCrn] = useState<string>('')
   const [desempenoAPI, setDesempenoAPI] = useState<ClasificacionDocenteAPI | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    let montado = true
-    const cargarPromedio = async () => {
-      setCargando(true)
-      try {
-        const data = await obtenerPromedioDocenteAPI(
-          docenteIdNumerico,
-          usuario?.token || 'demo_token'
-        )
-        if (montado) setDesempenoAPI(data)
-      } catch (err) {
-        console.warn('Backend evaluacionRoutes no disponible, simulando estructura de API:', err)
-        if (montado) {
-          setDesempenoAPI({
-            docenteId: docenteIdNumerico,
-            totalEvaluaciones: 18,
-            promedio: 8.8,
-            categoria: 'Bueno',
-            aptoParaAsignacion: true,
-            estatusAsignacion: true,
-            docente: {
-              nombre: usuario?.nombre?.replace('Docente ID ', '') || 'Juan',
-              apellido: 'Pérez',
-              departamento: 'Sistemas',
-            },
-          })
+    const token = usuario?.token || ''
+    // GET /api/evaluaciones/mi-promedio y GET /api/docentes/me/resultados
+    Promise.all([obtenerMiPromedioAPI(token), obtenerMisResultadosAPI(token)])
+      .then(([promedio, resultados]) => {
+        setDesempenoAPI(promedio)
+        setMisGrupos(resultados.grupos)
+        setCrn(resultados.grupos[0]?.crn || '')
+      })
+      .catch((err) => {
+        if (err instanceof ErrorAPI && err.status === 401) {
+          cerrarSesion()
+          navigate('/personal/docente/login', { replace: true })
+          return
         }
-      } finally {
-        if (montado) setCargando(false)
-      }
-    }
-
-    cargarPromedio()
-    return () => {
-      montado = false
-    }
-  }, [docenteIdNumerico, usuario])
+        setError(err.message)
+      })
+      .finally(() => setCargando(false))
+  }, [usuario?.token])
 
   const grupo = misGrupos.find((m) => m.crn === crn) || misGrupos[0]
-  const promedioGeneral = desempenoAPI?.promedio ?? 8.5
+  const promedioGeneral = desempenoAPI?.promedio ?? null
   const totalRespuestas = desempenoAPI?.totalEvaluaciones ?? 0
 
   return (
@@ -68,8 +50,11 @@ export default function PanelDocente() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Resultados y Desempeño Docente</h1>
         <p className="text-sm text-[#5d6678]">
-          Consulta analítica conectada a <code className="text-xs bg-[#e2e6ef] px-1.5 py-0.5 rounded text-[#0f766e]">GET /api/evaluaciones/promedio/:id</code>.
+          Promedios calculados en tiempo real a partir de las evaluaciones anónimas de tus alumnos.
         </p>
+        {error && (
+          <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mt-4">{error}</p>
+        )}
       </div>
 
       {/* Indicadores KPI */}
@@ -94,7 +79,7 @@ export default function PanelDocente() {
 
         <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
           <div className="text-2xl font-bold text-[#1c2333]">
-            {desempenoAPI?.categoria || 'Calculando...'}
+            {cargando ? 'Calculando...' : desempenoAPI?.categoria || '—'}
           </div>
           <div className="text-xs font-semibold text-[#5d6678] mt-1">
             Clasificación Institucional
@@ -128,7 +113,7 @@ export default function PanelDocente() {
           >
             {misGrupos.map((m) => (
               <option key={m.crn} value={m.crn}>
-                {m.nombre} · Grupo {m.grupo} (CRN {m.crn})
+                {m.nombre} (CRN {m.crn})
               </option>
             ))}
           </select>
@@ -145,17 +130,17 @@ export default function PanelDocente() {
           </p>
 
           <div className="space-y-4 max-h-[460px] overflow-y-auto pr-2">
-            {PREGUNTAS_INSTITUCIONALES.slice(0, 8).map((p, idx) => {
-              const valorReactivo = Math.min(10, Math.max(0, promedioGeneral - 0.2 + (idx % 3) * 0.2))
-              return (
-                <div key={p.id} className="grid grid-cols-[160px_1fr] sm:grid-cols-[180px_1fr] gap-3 items-center text-xs">
-                  <span className="font-medium text-[#1c2333] truncate" title={p.texto}>
-                    {p.texto}
-                  </span>
-                  <Barra valor={valorReactivo} max={10} />
-                </div>
-              )
-            })}
+            {grupo && grupo.porPregunta.length === 0 && (
+              <p className="text-xs text-[#5d6678]">Este grupo aún no tiene evaluaciones.</p>
+            )}
+            {grupo?.porPregunta.map((p) => (
+              <div key={p.id} className="grid grid-cols-[160px_1fr] sm:grid-cols-[180px_1fr] gap-3 items-center text-xs">
+                <span className="font-medium text-[#1c2333] truncate" title={p.texto}>
+                  {p.texto}
+                </span>
+                <Barra valor={p.promedio} max={10} />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -168,15 +153,14 @@ export default function PanelDocente() {
           </p>
 
           <div className="space-y-3 overflow-y-auto max-h-[400px] flex-1">
-            <div className="p-3.5 bg-[#f4f6fb] border border-[#e2e6ef] rounded-xl text-xs text-[#1c2333] italic">
-              “Explica con mucha claridad los temas de arquitectura y bases de datos. Muy buena disponibilidad.”
-            </div>
-            <div className="p-3.5 bg-[#f4f6fb] border border-[#e2e6ef] rounded-xl text-xs text-[#1c2333] italic">
-              “Excelente dominio de la materia y siempre puntual en las sesiones.”
-            </div>
-            <div className="p-3.5 bg-[#f4f6fb] border border-[#e2e6ef] rounded-xl text-xs text-[#1c2333] italic">
-              “La resolución de ejercicios prácticos facilita la comprensión de los proyectos.”
-            </div>
+            {grupo && grupo.comentarios.length === 0 && (
+              <p className="text-xs text-[#5d6678]">Sin comentarios para este grupo.</p>
+            )}
+            {grupo?.comentarios.map((c, i) => (
+              <div key={i} className="p-3.5 bg-[#f4f6fb] border border-[#e2e6ef] rounded-xl text-xs text-[#1c2333] italic">
+                “{c}”
+              </div>
+            ))}
           </div>
         </div>
       </div>

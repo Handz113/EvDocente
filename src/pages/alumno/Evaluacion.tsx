@@ -1,40 +1,63 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useParams, useNavigate, Navigate } from '../../router'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../context/AuthContext'
 import {
   PREGUNTAS_INSTITUCIONALES,
   ESCALA_VALORES,
-  MATERIAS_CATALOGO,
-  DOCENTES_CATALOGO,
+  obtenerMateriasAlumnoAPI,
   enviarEvaluacionAPI,
+  ErrorAPI,
+  type MateriaItem,
 } from '../../services/evaluacionService'
 
 export default function Evaluacion() {
   const { crn } = useParams<{ crn: string }>()
-  const { usuario } = useAuth()
+  const { usuario, cerrarSesion } = useAuth()
   const navigate = useNavigate()
 
   const [respuestas, setRespuestas] = useState<Record<number, number>>({})
   const [comentario, setComentario] = useState('')
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [materia, setMateria] = useState<MateriaItem | null>(null)
+  const [cargando, setCargando] = useState(true)
 
-  const materia = MATERIAS_CATALOGO.find((m) => m.crn === crn)
-  const docente = materia ? DOCENTES_CATALOGO.find((d) => d.id === materia.docenteId) : null
+  const sesionVencida = () => {
+    cerrarSesion()
+    navigate('/alumno', { replace: true })
+  }
 
-  const evaluadasStorage: string[] = JSON.parse(
-    localStorage.getItem(`evaluadas_${usuario?.matricula || 'default'}`) || '[]'
-  )
-  const yaEvaluada = crn ? evaluadasStorage.includes(crn) : false
+  useEffect(() => {
+    // Se consulta al backend para confirmar que el alumno sí está inscrito en este CRN
+    obtenerMateriasAlumnoAPI(usuario?.token || '')
+      .then((data) => setMateria(data.materias.find((m) => m.crn === crn) ?? null))
+      .catch((err) => {
+        if (err instanceof ErrorAPI && err.status === 401) return sesionVencida()
+        setError(err.message)
+      })
+      .finally(() => setCargando(false))
+  }, [crn, usuario?.token])
+
+  if (cargando) {
+    return (
+      <Layout titulo="Alumno" tono="alumno">
+        <p className="text-sm text-[#5d6678] text-center">Cargando evaluación...</p>
+      </Layout>
+    )
+  }
+
+  const docente = materia?.docente
 
   if (!materia) {
     return (
       <Layout titulo="Alumno" tono="alumno">
         <div className="bg-white border border-[#e2e6ef] rounded-2xl p-8 text-center max-w-lg mx-auto shadow-xs">
-          <h2 className="text-xl font-bold text-[#1c2333] mb-2">Materia no encontrada</h2>
+          <h2 className="text-xl font-bold text-[#1c2333] mb-2">
+            {error ? 'No se pudo cargar la evaluación' : 'Materia no encontrada'}
+          </h2>
           <p className="text-sm text-[#5d6678] mb-5">
-            El CRN indicado no corresponde a una materia activa en tu plan de estudios.
+            {error || 'El CRN indicado no corresponde a una materia activa en tu plan de estudios.'}
           </p>
           <button
             onClick={() => navigate('/alumno/inicio')}
@@ -47,7 +70,7 @@ export default function Evaluacion() {
     )
   }
 
-  if (yaEvaluada) {
+  if (materia.evaluada) {
     return <Navigate to="/alumno/inicio" replace />
   }
 
@@ -65,26 +88,17 @@ export default function Evaluacion() {
     setError('')
 
     // Convertir el mapa de respuestas al arreglo de 15 calificaciones requeridas por el endpoint
-    const arregloCalificaciones = PREGUNTAS_INSTITUCIONALES.map(
-      (p) => respuestas[p.id] ?? 10
-    )
+    const arregloCalificaciones = PREGUNTAS_INSTITUCIONALES.map((p) => respuestas[p.id])
 
     try {
-      // Llamada directa al API real del backend (POST /api/evaluaciones)
-      await enviarEvaluacionAPI(
-        materia.crn,
-        arregloCalificaciones,
-        usuario?.token || 'demo_token'
-      )
-    } catch (err: any) {
-      console.warn('API backend error or offline mode, saving locally:', err.message)
-      // Si el servidor de backend en postgres está en desarrollo local sin BD activa,
-      // permitimos continuar fluidamente registrando el estado
-    } finally {
-      const nuevoRegistro = [...evaluadasStorage, materia.crn]
-      localStorage.setItem(`evaluadas_${usuario?.matricula || 'default'}`, JSON.stringify(nuevoRegistro))
-      setEnviando(false)
+      // POST /api/evaluaciones — el backend registra la evaluación y sus 15 respuestas
+      await enviarEvaluacionAPI(materia.crn, arregloCalificaciones, usuario?.token || '', comentario)
       navigate('/alumno/listo', { state: { materia: materia.nombre } })
+    } catch (err) {
+      if (err instanceof ErrorAPI && err.status === 401) return sesionVencida()
+      setError((err as Error).message)
+    } finally {
+      setEnviando(false)
     }
   }
 
@@ -94,7 +108,7 @@ export default function Evaluacion() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#1c2333] mb-1">{materia.nombre}</h1>
           <p className="text-sm text-[#5d6678]">
-            {docente?.nombre || 'Docente'} · CRN {materia.crn} · Grupo {materia.grupo}
+            {docente?.nombre || 'Docente'} · CRN {materia.crn} · Clave {materia.clave}
           </p>
         </div>
 

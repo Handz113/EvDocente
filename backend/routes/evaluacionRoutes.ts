@@ -4,7 +4,7 @@ import {
   obtenerPromedioDocente, 
   calcularDesempenoDocente 
 } from '../controllers/evaluacionController';
-import { verificarToken, verificarRol } from '../middlewares/auth';
+import { verificarToken, verificarRol, type AuthRequest } from '../middlewares/auth';
 
 const router = Router();
 
@@ -18,6 +18,21 @@ router.post(
   verificarToken,
   verificarRol(['Alumno']),
   crearEvaluacion
+);
+
+/**
+ * GET /api/evaluaciones/mi-promedio
+ * El docente consulta su propio promedio y clasificación (el id sale del token,
+ * así un docente no puede consultar a otro).
+ */
+router.get(
+  '/mi-promedio',
+  verificarToken,
+  verificarRol(['Docente']),
+  (req: AuthRequest, res, next) => {
+    req.params.docenteId = String(req.user.id);
+    return obtenerPromedioDocente(req, res).catch(next);
+  }
 );
 
 /**
