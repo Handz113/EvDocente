@@ -3,6 +3,7 @@ import 'dotenv/config';
 // Importa las rutas que te generó Antigravity IDE
 // Asegúrate de que la ruta coincida con el nombre exacto del archivo generado
 import evaluacionRoutes from './routes/evaluacionRoutes';
+import authRoutes from './routes/authRoutes';
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 // RUTAS DE LA API
 // =========================
 app.use('/api/evaluaciones', evaluacionRoutes);
+app.use('/api/auth', authRoutes);
 
 // Manejo de rutas no encontradas (404)
 app.use((req, res) => {
