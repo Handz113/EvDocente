@@ -1,3 +1,6 @@
+-- Los archivos están en UTF-8: evita acentos rotos al cargarlos desde la consola de Windows
+SET client_encoding = 'UTF8';
+
 -- =========================
 -- TABLAS DE SEGURIDAD Y CONFIGURACIÓN (Nuevas)
 -- =========================

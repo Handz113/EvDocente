@@ -2,94 +2,99 @@ import { useState, useEffect } from 'react'
 import Layout from '../../../components/Layout'
 import Barra from '../../../components/Barra'
 import { useAuth } from '../../../context/AuthContext'
+import { useNavigate } from '../../../router'
 import {
-  DOCENTES_CATALOGO,
-  MATERIAS_CATALOGO,
-  PREGUNTAS_INSTITUCIONALES,
-  PERIODO_ACTUAL,
+  listarDocentesAPI,
   obtenerPromedioDocenteAPI,
-  type ClasificacionDocenteAPI,
+  ErrorAPI,
+  type DocenteAPI,
 } from '../../../services/evaluacionService'
 
 interface DocenteConMetricas {
   id: string
   nombre: string
   area: string
-  correo: string
-  promedio: number
+  correo?: string
+  materias: DocenteAPI['materias']
+  promedio: number | null
   totalEvaluaciones: number
   categoria: string
   apto: boolean
 }
 
 export default function PanelCoordinacion() {
-  const { usuario } = useAuth()
+  const { usuario, cerrarSesion } = useAuth()
+  const navigate = useNavigate()
   const [area, setArea] = useState('todas')
   const [orden, setOrden] = useState<'mayor' | 'menor'>('mayor')
   const [seleccionId, setSeleccionId] = useState<string | null>(null)
   const [listaDocentes, setListaDocentes] = useState<DocenteConMetricas[]>([])
+  const [error, setError] = useState('')
 
   useEffect(() => {
+    const token = usuario?.token || ''
     const consultarDocentes = async () => {
+      // GET /api/docentes y, por cada uno, GET /api/evaluaciones/promedio/:id
+      const docentes = await listarDocentesAPI(token)
       const metricas: DocenteConMetricas[] = await Promise.all(
-        DOCENTES_CATALOGO.map(async (d) => {
-          try {
-            const apiRes: ClasificacionDocenteAPI = await obtenerPromedioDocenteAPI(
-              d.id,
-              usuario?.token || 'demo_token'
-            )
-            return {
-              id: d.id,
-              nombre: d.nombre,
-              area: d.area,
-              correo: d.correo,
-              promedio: apiRes.promedio ?? 8.5,
-              totalEvaluaciones: apiRes.totalEvaluaciones || 15,
-              categoria: apiRes.categoria || 'Bueno',
-              apto: apiRes.aptoParaAsignacion ?? true,
-            }
-          } catch {
-            return {
-              id: d.id,
-              nombre: d.nombre,
-              area: d.area,
-              correo: d.correo,
-              promedio: d.id === '1' ? 9.2 : d.id === '2' ? 8.6 : 7.4,
-              totalEvaluaciones: 14,
-              categoria: d.id === '1' ? 'Excelente' : d.id === '2' ? 'Bueno' : 'Suficiente',
-              apto: true,
-            }
+        docentes.map(async (d) => {
+          const apiRes = await obtenerPromedioDocenteAPI(d.id, token)
+          return {
+            id: d.id,
+            nombre: d.nombre,
+            area: d.area,
+            correo: d.correo,
+            materias: d.materias,
+            promedio: apiRes.promedio,
+            totalEvaluaciones: apiRes.totalEvaluaciones,
+            categoria: apiRes.categoria,
+            apto: apiRes.aptoParaAsignacion,
           }
         })
       )
       setListaDocentes(metricas)
     }
 
-    consultarDocentes()
-  }, [usuario])
+    consultarDocentes().catch((err) => {
+      if (err instanceof ErrorAPI && err.status === 401) {
+        cerrarSesion()
+        navigate('/personal/coordinacion/login', { replace: true })
+        return
+      }
+      setError(err.message)
+    })
+  }, [usuario?.token])
 
   const areasDisponibles = [...new Set(listaDocentes.map((r) => r.area))]
 
   const listaFiltrada = listaDocentes
     .filter((r) => area === 'todas' || r.area === area)
-    .sort((a, b) => (orden === 'mayor' ? b.promedio - a.promedio : a.promedio - b.promedio))
+    .sort((a, b) => {
+      // Los docentes sin evaluaciones van al final en ambos órdenes
+      if (a.promedio === null) return 1
+      if (b.promedio === null) return -1
+      return orden === 'mayor' ? b.promedio - a.promedio : a.promedio - b.promedio
+    })
 
   const totalRespuestas = listaFiltrada.reduce((a, r) => a + r.totalEvaluaciones, 0)
   const promedioGeneral = totalRespuestas
-    ? listaFiltrada.reduce((a, r) => a + r.promedio * r.totalEvaluaciones, 0) / totalRespuestas
+    ? listaFiltrada.reduce((a, r) => a + (r.promedio ?? 0) * r.totalEvaluaciones, 0) / totalRespuestas
     : 0
-  const enRiesgo = listaFiltrada.filter((r) => r.promedio < 7.0).length
+  const enRiesgo = listaFiltrada.filter((r) => r.promedio !== null && r.promedio < 7.0).length
 
   const docenteDetalle = seleccionId ? listaDocentes.find((d) => d.id === seleccionId) : null
-  const materiasDocente = seleccionId ? MATERIAS_CATALOGO.filter((m) => m.docenteId === seleccionId) : []
+  const materiasDocente = docenteDetalle?.materias ?? []
 
   return (
     <Layout titulo="Coordinación" tono="personal">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Panel de Coordinación Académica</h1>
         <p className="text-sm text-[#5d6678]">
-          Monitoreo de desempeño para asignación docente del ciclo <strong className="text-[#1c2333]">{PERIODO_ACTUAL.nombre}</strong>.
+          Monitoreo de desempeño para asignación docente del ciclo activo.
         </p>
+        {error && (
+          <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mt-4">{error}</p>
+        )}
       </div>
 
       {/* Tarjetas KPI */}
@@ -173,7 +178,11 @@ export default function PanelCoordinacion() {
                   </td>
                   <td className="py-3 px-3 text-[#5d6678]">{r.totalEvaluaciones}</td>
                   <td className="py-3 px-3">
-                    <Barra valor={r.promedio} max={10} />
+                    {r.promedio === null ? (
+                      <span className="text-[#5d6678]">Sin evaluaciones</span>
+                    ) : (
+                      <Barra valor={r.promedio} max={10} />
+                    )}
                   </td>
                   <td className="py-3 px-3">
                     <span
@@ -219,26 +228,13 @@ export default function PanelCoordinacion() {
             {materiasDocente.map((m) => (
               <div key={m.crn} className="p-4 rounded-xl border border-[#e2e6ef] bg-[#f4f6fb]">
                 <h3 className="text-sm font-bold text-[#1c2333] mb-1">{m.nombre}</h3>
-                <p className="text-xs text-[#5d6678] mb-3">CRN {m.crn} · Grupo {m.grupo}</p>
-                <Barra valor={docenteDetalle.promedio} max={10} />
+                <p className="text-xs text-[#5d6678] mb-3">CRN {m.crn} · Clave {m.clave}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Promedio global por criterios institucionales */}
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs">
-        <h2 className="text-lg font-bold text-[#1c2333] mb-4">Promedio Global por Criterios Institucionales</h2>
-        <div className="space-y-3">
-          {PREGUNTAS_INSTITUCIONALES.slice(0, 6).map((p, i) => (
-            <div key={p.id} className="grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-4 items-center text-xs">
-              <span className="font-medium text-[#1c2333] truncate">{p.texto}</span>
-              <Barra valor={Math.min(10, 8.2 + (i % 3) * 0.4)} max={10} />
-            </div>
-          ))}
-        </div>
-      </div>
     </Layout>
   )
 }
