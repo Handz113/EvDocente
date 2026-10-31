@@ -231,3 +231,15 @@ export interface DocenteAPI extends DocenteResumen {
 export function listarDocentesAPI(token: string) {
   return peticion<DocenteAPI[]>('/docentes', {}, token)
 }
+
+export interface AlumnoFaltanteAPI {
+  matricula: string
+  nombreAlumno: string
+  crnFaltante: number | string
+  nombreMateria: string
+}
+
+/** GET /api/admin/faltantes (administración) */
+export function obtenerAlumnosFaltantesAPI(token: string) {
+  return peticion<{ faltantes: AlumnoFaltanteAPI[] }>('/admin/faltantes', {}, token)
+}
