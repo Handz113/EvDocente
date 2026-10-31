@@ -3,7 +3,7 @@ import pool from '../config/db';
 
 export const crearEvaluacion = async (req: Request, res: Response): Promise<void> => {
   const idAlumno = (req as any).user?.id || (req as any).user?.matricula;
-  const { crn, calificaciones } = req.body;
+  const { crn, calificaciones, comentarios } = req.body;
 
   if (!crn || !calificaciones || !Array.isArray(calificaciones) || calificaciones.length !== 15) {
     res.status(400).json({
@@ -35,12 +35,29 @@ export const crearEvaluacion = async (req: Request, res: Response): Promise<void
   try {
     await client.query('BEGIN');
 
+    // 1. El front manda el número de CRN visible (ej. 40211); se traduce a id_crn
+    //    y se verifica que el alumno esté inscrito en ese CRN.
+    const inscripcion = await client.query(
+      `SELECT c.id_crn
+       FROM CRN c
+       INNER JOIN Inscripcion i ON i.id_crn = c.id_crn AND i.id_alumno = $1
+       WHERE c.crn = $2`,
+      [idAlumno, Number(crn)]
+    );
+
+    if (inscripcion.rows.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(403).json({ mensaje: 'No estás inscrito en ese CRN.' });
+      return;
+    }
+    const idCrn = inscripcion.rows[0].id_crn;
+
     // 2. Usar los nombres reales: Evaluacion, id_alumno, id_crn
     const checkQuery = `
-      SELECT id_evaluacion FROM Evaluacion 
+      SELECT id_evaluacion FROM Evaluacion
       WHERE id_alumno = $1 AND id_crn = $2
     `;
-    const checkResult = await client.query(checkQuery, [idAlumno, crn]);
+    const checkResult = await client.query(checkQuery, [idAlumno, idCrn]);
 
     if (checkResult.rows.length > 0) {
       await client.query('ROLLBACK');
@@ -54,11 +71,13 @@ export const crearEvaluacion = async (req: Request, res: Response): Promise<void
 
     // 4. Insertar usando los nombres reales
     const insertEvalQuery = `
-      INSERT INTO Evaluacion (id_alumno, id_crn, promedio, fecha)
-      VALUES ($1, $2, $3, NOW())
+      INSERT INTO Evaluacion (id_alumno, id_crn, promedio, comentarios, fecha)
+      VALUES ($1, $2, $3, $4, NOW())
       RETURNING id_evaluacion
     `;
-    const evalResult = await client.query(insertEvalQuery, [idAlumno, crn, promedio]);
+    const comentarioLimpio =
+      typeof comentarios === 'string' && comentarios.trim() ? comentarios.trim().slice(0, 500) : null;
+    const evalResult = await client.query(insertEvalQuery, [idAlumno, idCrn, promedio, comentarioLimpio]);
     const evaluacionId = evalResult.rows[0].id_evaluacion;
 
     // 5. Insertar respuestas usando: Respuesta, id_evaluacion, id_pregunta, valor

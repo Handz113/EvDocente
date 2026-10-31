@@ -34,6 +34,10 @@ react(),
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
+      // Reenvía las llamadas /api al backend de Express (npm run dev:backend)
+      proxy: {
+        '/api': `http://localhost:${process.env.BACKEND_PORT || '3000'}`,
+      },
       watch: {
         ignored: [
           '**/.figma/**',

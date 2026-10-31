@@ -2,7 +2,7 @@ export interface DocenteResumen {
   id: string
   nombre: string
   area: string
-  correo: string
+  correo?: string
 }
 
 export interface MateriaItem {
@@ -10,7 +10,7 @@ export interface MateriaItem {
   clave: string
   nombre: string
   docenteId: string
-  grupo: string
+  grupo?: string
   docente?: DocenteResumen
   evaluada?: boolean
 }
@@ -101,7 +101,8 @@ export const PERIODO_ACTUAL: PeriodoItem = {
   activo: true,
 }
 
-// Materias institucionales preconfiguradas
+// Datos locales: solo los usa el panel de Administración mientras no tenga sus
+// endpoints de catálogos. Alumno, Docente y Coordinación ya leen de la BD.
 export const MATERIAS_CATALOGO: MateriaItem[] = [
   { crn: '40211', clave: 'BDA0201', nombre: 'Bases de Datos Avanzadas', docenteId: '1', grupo: '501' },
   { crn: '40215', clave: 'ANSI0301G', nombre: 'Diseño y Gestión de Sistemas', docenteId: '1', grupo: '501' },
@@ -115,58 +116,118 @@ export const DOCENTES_CATALOGO: DocenteResumen[] = [
   { id: '3', nombre: 'Dr. Roberto Salas', area: 'Ciencias Básicas', correo: 'roberto.salas@escuela.edu' },
 ]
 
-const API_BASE = '/api/evaluaciones'
+// ==========================================================
+// CONEXIÓN CON EL BACKEND (Express en :3000, vía proxy de Vite)
+// ==========================================================
 
-/**
- * Envía una evaluación docente a la API real del backend (POST /api/evaluaciones)
- */
-export async function enviarEvaluacionAPI(
-  crn: number | string,
-  calificaciones: number[],
-  token: string
-): Promise<EvaluacionRespuestaAPI> {
-  const response = await fetch(`${API_BASE}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      crn: Number(crn),
-      calificaciones,
-    }),
-  })
-
-  const data = await response.json()
-  if (!response.ok) {
-    throw new Error(data.mensaje || 'Error al enviar la evaluación.')
+/** Error de la API con el código HTTP, para que las vistas distingan 401 (sesión vencida). */
+export class ErrorAPI extends Error {
+  constructor(mensaje: string, public status: number) {
+    super(mensaje)
   }
-  return data
 }
 
-/**
- * Consulta el promedio y desempeño de un docente en tiempo real desde la API real (GET /api/evaluaciones/promedio/:docenteId)
- */
-export async function obtenerPromedioDocenteAPI(
+async function peticion<T>(ruta: string, opciones: RequestInit = {}, token?: string): Promise<T> {
+  let response: Response
+  try {
+    response = await fetch(`/api${ruta}`, {
+      ...opciones,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...opciones.headers,
+      },
+    })
+  } catch {
+    throw new ErrorAPI('No se pudo conectar con el servidor. ¿Está corriendo el backend?', 0)
+  }
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const porDefecto =
+      response.status === 502 || response.status === 504
+        ? 'El backend no está corriendo (npm run dev:backend).'
+        : 'Error al comunicarse con el servidor.'
+    throw new ErrorAPI(data.mensaje || porDefecto, response.status)
+  }
+  return data as T
+}
+
+export interface RespuestaLogin {
+  token: string
+  usuario: {
+    rol: 'alumno' | 'docente' | 'coordinacion' | 'administracion'
+    id: number
+    matricula: string
+    nombre: string
+    docenteId?: string
+  }
+}
+
+/** POST /api/auth/login */
+export function iniciarSesionAPI(usuario: string, contrasena: string, area: string) {
+  return peticion<RespuestaLogin>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ usuario, contrasena, area }),
+  })
+}
+
+/** GET /api/alumno/materias — materias inscritas del alumno con sesión */
+export function obtenerMateriasAlumnoAPI(token: string) {
+  return peticion<{ periodo: PeriodoItem | null; materias: MateriaItem[] }>('/alumno/materias', {}, token)
+}
+
+/** POST /api/evaluaciones */
+export function enviarEvaluacionAPI(
+  crn: number | string,
+  calificaciones: number[],
+  token: string,
+  comentarios?: string
+): Promise<EvaluacionRespuestaAPI> {
+  return peticion<EvaluacionRespuestaAPI>(
+    '/evaluaciones',
+    { method: 'POST', body: JSON.stringify({ crn: Number(crn), calificaciones, comentarios }) },
+    token
+  )
+}
+
+/** GET /api/evaluaciones/promedio/:docenteId (coordinación y administración) */
+export function obtenerPromedioDocenteAPI(
   docenteId: number | string,
   token: string,
   periodo?: string
 ): Promise<ClasificacionDocenteAPI> {
-  const url = new URL(`${API_BASE}/promedio/${docenteId}`, window.location.origin)
-  if (periodo) {
-    url.searchParams.append('periodo', periodo)
-  }
+  const query = periodo ? `?periodo=${encodeURIComponent(periodo)}` : ''
+  return peticion<ClasificacionDocenteAPI>(`/evaluaciones/promedio/${docenteId}${query}`, {}, token)
+}
 
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
+/** GET /api/evaluaciones/mi-promedio (docente) */
+export function obtenerMiPromedioAPI(token: string) {
+  return peticion<ClasificacionDocenteAPI>('/evaluaciones/mi-promedio', {}, token)
+}
 
-  const data = await response.json()
-  if (!response.ok) {
-    throw new Error(data.mensaje || 'Error al obtener promedio docente.')
-  }
-  return data
+export interface GrupoResultados {
+  crn: string
+  clave: string
+  nombre: string
+  totalEvaluaciones: number
+  promedio: number | null
+  categoria: ClasificacionDocenteAPI['categoria']
+  aptoParaAsignacion: boolean
+  porPregunta: { id: number; texto: string; promedio: number }[]
+  comentarios: string[]
+}
+
+/** GET /api/docentes/me/resultados (docente) */
+export function obtenerMisResultadosAPI(token: string) {
+  return peticion<{ grupos: GrupoResultados[] }>('/docentes/me/resultados', {}, token)
+}
+
+export interface DocenteAPI extends DocenteResumen {
+  materias: { crn: string; clave: string; nombre: string }[]
+}
+
+/** GET /api/docentes (coordinación y administración) */
+export function listarDocentesAPI(token: string) {
+  return peticion<DocenteAPI[]>('/docentes', {}, token)
 }
