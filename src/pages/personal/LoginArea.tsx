@@ -1,15 +1,15 @@
-import { useState, type FormEvent } from 'react'
-import { useParams, useNavigate, Link, Navigate } from '../../router'
-import { useAuth } from '../../context/AuthContext'
-import { areas } from './areas'
-import { iniciarSesionAPI } from '../../services/evaluacionService'
+import { useState, type FormEvent } from "react"
+import { useParams, useNavigate, Link, Navigate } from "../../router"
+import { useAuth } from "../../context/AuthContext"
+import { areas } from "./areas"
+import { iniciarSesionAPI } from "../../services/evaluacionService"
 
 export default function LoginArea() {
   const { area } = useParams<{ area: string }>()
   const info = area ? areas[area] : undefined
-  const [usuarioTxt, setUsuarioTxt] = useState('')
-  const [contraseña, setContraseña] = useState('')
-  const [error, setError] = useState('')
+  const [usuarioTxt, setUsuarioTxt] = useState("")
+  const [contraseña, setContraseña] = useState("")
+  const [error, setError] = useState("")
   const [enviando, setEnviando] = useState(false)
   const { iniciarSesion } = useAuth()
   const navigate = useNavigate()
@@ -19,15 +19,19 @@ export default function LoginArea() {
   const entrar = async (e: FormEvent) => {
     e.preventDefault()
     if (!usuarioTxt.trim() || !contraseña.trim()) {
-      setError('Completa tus credenciales de acceso.')
+      setError("Completa tus credenciales de acceso.")
       return
     }
 
     setEnviando(true)
-    setError('')
+    setError("")
     try {
       // POST /api/auth/login — el backend verifica que la cuenta sea de esta área
-      const { token, usuario } = await iniciarSesionAPI(usuarioTxt.trim(), contraseña, info.id)
+      const { token, usuario } = await iniciarSesionAPI(
+        usuarioTxt.trim(),
+        contraseña,
+        info.id,
+      )
       iniciarSesion({ ...usuario, token })
       navigate(`/personal/${info.id}`)
     } catch (err) {
@@ -52,7 +56,10 @@ export default function LoginArea() {
         </div>
 
         <div className="flex flex-col gap-1.5 mb-4">
-          <label htmlFor="usuario" className="text-xs font-semibold text-[#1c2333]">
+          <label
+            htmlFor="usuario"
+            className="text-xs font-semibold text-[#1c2333]"
+          >
             {info.campo}
           </label>
           <input
@@ -66,8 +73,11 @@ export default function LoginArea() {
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 mb-5">
-          <label htmlFor="pass" className="text-xs font-semibold text-[#1c2333]">
+        <div className="flex flex-col gap-1.5 mb-2">
+          <label
+            htmlFor="pass"
+            className="text-xs font-semibold text-[#1c2333]"
+          >
             Contraseña
           </label>
           <input
@@ -80,22 +90,41 @@ export default function LoginArea() {
           />
         </div>
 
-        {error && <p className="text-xs text-[#dc2626] font-semibold mb-4 text-center">{error}</p>}
+        <div className="flex justify-end mb-5">
+          <Link
+            to="/recuperar-password"
+            className="text-xs font-medium text-[#0f766e] hover:text-[#0c5c56] hover:underline transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
+
+        {error && (
+          <p className="text-xs text-[#dc2626] font-semibold mb-4 text-center">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={enviando}
           className="w-full py-3 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white font-semibold text-sm shadow-md transition-all cursor-pointer disabled:opacity-60"
         >
-          {enviando ? 'Entrando...' : `Entrar como ${info.nombre.toLowerCase()}`}
+          {enviando
+            ? "Entrando..."
+            : `Entrar como ${info.nombre.toLowerCase()}`}
         </button>
 
         <p className="text-xs text-[#5d6678] text-center mt-4">
-          Prueba: <strong className="text-[#1c2333]">{info.ejemplo}</strong> / <strong className="text-[#1c2333]">demo123</strong>
+          Prueba: <strong className="text-[#1c2333]">{info.ejemplo}</strong> /{" "}
+          <strong className="text-[#1c2333]">demo123</strong>
         </p>
 
         <div className="text-center mt-5">
-          <Link to="/personal" className="text-xs font-semibold text-[#5d6678] hover:text-[#0f766e] transition-colors">
+          <Link
+            to="/personal"
+            className="text-xs font-semibold text-[#5d6678] hover:text-[#0f766e] transition-colors"
+          >
             ← Cambiar de área
           </Link>
         </div>

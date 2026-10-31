@@ -194,3 +194,82 @@ export const solicitarRecuperacion = async (
     })
   }
 }
+
+/**
+ * POST /api/auth/reset-password
+ * Body: { token, nuevaContrasena }
+ * Valida el token JWT de recuperación, cifra la nueva contraseña con bcrypt
+ * y actualiza el registro del usuario en la base de datos PostgreSQL.
+ */
+export const restablecerPassword = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { token, nuevaContrasena } = req.body ?? {}
+
+  if (!token || typeof token !== "string") {
+    res.status(400).json({ mensaje: "El token de recuperación es requerido." })
+    return
+  }
+
+  if (
+    !nuevaContrasena ||
+    typeof nuevaContrasena !== "string" ||
+    nuevaContrasena.trim().length < 6
+  ) {
+    res
+      .status(400)
+      .json({
+        mensaje: "La nueva contraseña debe tener al menos 6 caracteres.",
+      })
+    return
+  }
+
+  const secret = process.env.JWT_SECRET || "secret"
+
+  try {
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, secret)
+    } catch (jwtErr: any) {
+      if (jwtErr?.name === "TokenExpiredError") {
+        res.status(401).json({
+          mensaje:
+            "El enlace de recuperación ha expirado. Por favor solicita uno nuevo.",
+        })
+        return
+      }
+      res.status(401).json({
+        mensaje: "El enlace de recuperación es inválido o está corrupto.",
+      })
+      return
+    }
+
+    if (!decoded || !decoded.id_usuario) {
+      res
+        .status(400)
+        .json({ mensaje: "Token de recuperación no válido para este usuario." })
+      return
+    }
+
+    const salt = await bcrypt.genSalt(10)
+    const hashedPassword = await bcrypt.hash(nuevaContrasena, salt)
+
+    const result = await pool.query(
+      "UPDATE Usuario SET contrasena = $1 WHERE id_usuario = $2 RETURNING id_usuario",
+      [hashedPassword, decoded.id_usuario],
+    )
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ mensaje: "Usuario no encontrado." })
+      return
+    }
+
+    res.status(200).json({ mensaje: "Contraseña restablecida exitosamente." })
+  } catch (error) {
+    console.error("Error en restablecerPassword:", error)
+    res.status(500).json({
+      mensaje: "Error interno del servidor al restablecer la contraseña.",
+    })
+  }
+}
