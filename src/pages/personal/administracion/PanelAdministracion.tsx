@@ -1,10 +1,12 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react'
 import Layout from '../../../components/Layout'
+import { useAuth } from '../../../context/AuthContext'
 import {
   DOCENTES_CATALOGO,
   MATERIAS_CATALOGO,
   PREGUNTAS_INSTITUCIONALES,
   PERIODO_ACTUAL,
+  obtenerAlumnosFaltantesAPI,
   type DocenteResumen,
   type MateriaItem,
   type PreguntaItem,
@@ -17,6 +19,7 @@ const pestañas = [
   { id: 'materias', nombre: 'Materias / CRN' },
   { id: 'preguntas', nombre: 'Preguntas' },
   { id: 'periodos', nombre: 'Periodos' },
+  { id: 'faltantes', nombre: 'Alumnos Faltantes' },
 ]
 
 interface UsuarioPersonal {
@@ -26,7 +29,16 @@ interface UsuarioPersonal {
   activo: boolean
 }
 
+interface AlumnoFaltante {
+  id: string
+  matricula: string
+  nombreAlumno: string
+  crnFaltante: string
+  nombreMateria: string
+}
+
 export default function PanelAdministracion() {
+  const { usuario } = useAuth()
   const [activa, setActiva] = useState('usuarios')
 
   const [usuarios, setUsuarios] = useState<UsuarioPersonal[]>([
@@ -42,6 +54,43 @@ export default function PanelAdministracion() {
     PERIODO_ACTUAL,
     { id: '2', nombre: 'Ciclo 2026-1', inicio: '2026-02-01', fin: '2026-06-30', activo: false },
   ])
+
+  const [listaFaltantes, setListaFaltantes] = useState<AlumnoFaltante[]>([])
+  const [cargandoFaltantes, setCargandoFaltantes] = useState(false)
+  const [errorFaltantes, setErrorFaltantes] = useState('')
+
+  useEffect(() => {
+    if (activa !== 'faltantes') return
+
+    const cargarFaltantes = async () => {
+      const token = usuario?.token
+      if (!token) {
+        setErrorFaltantes('Inicia sesión con credenciales de Administrador (ADMIN001 / demo123) para sincronizar con la base de datos.')
+        return
+      }
+
+      setCargandoFaltantes(true)
+      setErrorFaltantes('')
+      try {
+        const data = await obtenerAlumnosFaltantesAPI(token)
+        const mapeados: AlumnoFaltante[] = data.faltantes.map((f, idx) => ({
+          id: `${f.matricula}-${f.crnFaltante}-${idx}`,
+          matricula: f.matricula,
+          nombreAlumno: f.nombreAlumno,
+          crnFaltante: String(f.crnFaltante),
+          nombreMateria: f.nombreMateria,
+        }))
+        setListaFaltantes(mapeados)
+      } catch (err: any) {
+        console.error('Error al cargar alumnos faltantes:', err)
+        setErrorFaltantes(err.message || 'Error al obtener alumnos faltantes de la base de datos.')
+      } finally {
+        setCargandoFaltantes(false)
+      }
+    }
+
+    cargarFaltantes()
+  }, [activa, usuario?.token])
 
   return (
     <Layout
@@ -207,6 +256,51 @@ export default function PanelAdministracion() {
           }
           nota="Solo puede haber un ciclo activo simultáneo para capturas de evaluación docente."
         />
+      )}
+
+      {activa === 'faltantes' && (
+        <div>
+          {errorFaltantes && (
+            <div className="p-3.5 mb-4 rounded-xl bg-[#fee2e2] border border-[#fecaca] text-[#dc2626] text-xs font-semibold">
+              {errorFaltantes}
+            </div>
+          )}
+          {cargandoFaltantes && listaFaltantes.length === 0 ? (
+            <div className="bg-white border border-[#e2e6ef] rounded-2xl p-8 text-center text-xs text-[#5d6678] shadow-xs mb-8">
+              Cargando alumnos faltantes desde la base de datos...
+            </div>
+          ) : (
+            <Catalogo<AlumnoFaltante>
+              titulo="Alumnos con Evaluaciones Pendientes (Base de Datos Real)"
+              columnas={[
+                { id: 'matricula', nombre: 'Matrícula' },
+                { id: 'nombreAlumno', nombre: 'Nombre del Alumno' },
+                {
+                  id: 'crnFaltante',
+                  nombre: 'CRN Faltante',
+                  mostrar: (v) => (
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#fef3c7] text-[#b45309] text-xs font-semibold">
+                      {String(v)}
+                    </span>
+                  ),
+                },
+                { id: 'nombreMateria', nombre: 'Materia' },
+              ]}
+              filas={listaFaltantes}
+              clave="id"
+              onAgregar={(f) =>
+                setListaFaltantes([
+                  ...listaFaltantes,
+                  { ...(f as AlumnoFaltante), id: String(Date.now()) },
+                ])
+              }
+              onEliminar={(f) =>
+                setListaFaltantes(listaFaltantes.filter((item) => item.id !== f.id))
+              }
+              nota="Datos en tiempo real desde PostgreSQL: Lista de alumnos inscritos en asignaturas del ciclo escolar activo que aún no registran evaluación docente."
+            />
+          )}
+        </div>
       )}
     </Layout>
   )
