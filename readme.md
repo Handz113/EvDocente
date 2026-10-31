@@ -23,13 +23,14 @@ El sistema está construido bajo una arquitectura de 3 capas (Presentación, Ló
 *   **Docente:** Consulta de desempeño propio, histórico de ciclos y clasificación de materias asignadas.
 *   **Alumno:** Visualización de avance, evaluación de docentes (cuestionario de 15 preguntas) y evaluación de laboratorios/talleres.
 
-## 📈 Estado Actual: Sprint 5
-Nos encontramos en la fase de **Ejecución**. Sprints 1, 2, 3 y 4 completados.
+## 📈 Estado Actual: Sprint 6
+Nos encontramos en la fase de **Ejecución**. Sprints 1, 2, 3, 4 y 5 completados.
 Actualmente desarrollando:
-*   Integración de Frontend con Backend.
-*   Vistas para usuarios y diseño UI para coordinadores.
-*   Calculo de Promedios.
-*   Ranking y recuperacion de contraseñas.
-
+*   .Modulo de Talleres
+*   .Modulo de Historicos
+*   .Correos Automaticos
+*   .Despliegue en entorno de produccion
+*   .Mejoras en la interfaz de usuario
+*   .Segundo prototipo para su presentacion
 ---
 *Materia: Diseño y Gestión de Sistemas - 7mo Semestre, UVM.*
