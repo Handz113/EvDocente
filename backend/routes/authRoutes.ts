@@ -1,9 +1,12 @@
-import { Router } from 'express';
-import { login } from '../controllers/authController';
+import { Router } from "express"
+import { login, solicitarRecuperacion } from "../controllers/authController"
 
-const router = Router();
+const router = Router()
 
 /** POST /api/auth/login — pública, devuelve el JWT */
-router.post('/login', login);
+router.post("/login", login)
 
-export default router;
+/** POST /api/auth/recuperar-password — pública, solicita enlace de recuperación */
+router.post("/recuperar-password", solicitarRecuperacion)
+
+export default router
