@@ -1,26 +1,34 @@
-import { Routes, Route, Navigate } from './router'
-import RutaProtegida from './components/RutaProtegida'
+import { Routes, Route, Navigate } from "./router"
+import RutaProtegida from "./components/RutaProtegida"
 
 // Vista inicial
-import Bienvenida from './pages/Bienvenida'
+import Bienvenida from "./pages/Bienvenida"
 
 // Interfaz de alumnos
-import LoginAlumno from './pages/alumno/LoginAlumno'
-import InicioAlumno from './pages/alumno/InicioAlumno'
-import Evaluacion from './pages/alumno/Evaluacion'
-import Confirmacion from './pages/alumno/Confirmacion'
+import LoginAlumno from "./pages/alumno/LoginAlumno"
+import InicioAlumno from "./pages/alumno/InicioAlumno"
+import Evaluacion from "./pages/alumno/Evaluacion"
+import Confirmacion from "./pages/alumno/Confirmacion"
 
 // Interfaz de personal
-import LoginPersonal from './pages/personal/LoginPersonal'
-import LoginArea from './pages/personal/LoginArea'
-import PanelDocente from './pages/personal/docente/PanelDocente'
-import PanelCoordinacion from './pages/personal/coordinacion/PanelCoordinacion'
-import PanelAdministracion from './pages/personal/administracion/PanelAdministracion'
+import LoginPersonal from "./pages/personal/LoginPersonal"
+import LoginArea from "./pages/personal/LoginArea"
+import PanelDocente from "./pages/personal/docente/PanelDocente"
+import PanelCoordinacion from "./pages/personal/coordinacion/PanelCoordinacion"
+import PanelAdministracion from "./pages/personal/administracion/PanelAdministracion"
+
+// Recuperación de contraseñas
+import RecuperarPassword from "./pages/RecuperarPassword"
+import ResetPassword from "./pages/ResetPassword"
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Bienvenida />} />
+
+      {/* ---------- RECUPERACIÓN DE CONTRASEÑA (PÚBLICAS) ---------- */}
+      <Route path="/recuperar-password" element={<RecuperarPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* ---------- ALUMNOS ---------- */}
       <Route path="/alumno" element={<LoginAlumno />} />
