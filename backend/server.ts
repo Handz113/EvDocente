@@ -28,6 +28,7 @@ app.get('/api/salud', async (_req, res) => {
   }
 });
 
+// Rutas de autenticación (login, recuperación de contraseñas)
 app.use('/api/auth', authRoutes);
 app.use('/api/alumno', alumnoRoutes);
 app.use('/api/docentes', docenteRoutes);
