@@ -60,3 +60,40 @@ SELECT setval(pg_get_serial_sequence('alumno', 'id_alumno'), (SELECT MAX(id_alum
 SELECT setval(pg_get_serial_sequence('materia', 'id_materia'), (SELECT MAX(id_materia) FROM Materia));
 SELECT setval(pg_get_serial_sequence('crn', 'id_crn'), (SELECT MAX(id_crn) FROM CRN));
 SELECT setval(pg_get_serial_sequence('pregunta', 'id_pregunta'), (SELECT MAX(id_pregunta) FROM Pregunta));
+
+-- 8. Alumnos de prueba adicionales con evaluaciones pendientes (para el panel de Administración)
+INSERT INTO Usuario (numero_cuenta, correo_institucional, contrasena, id_rol, activo)
+VALUES
+    ('ALU002', 'carlos.ramirez@escuela.edu', '$2b$10$Dk9PNoPZIhAgQM6ABVBW2.OcxJnmlZd1Tx85RBH3fXG0KZv3x9wT.', 4, true),
+    ('ALU003', 'maria.gomez@escuela.edu', '$2b$10$Dk9PNoPZIhAgQM6ABVBW2.OcxJnmlZd1Tx85RBH3fXG0KZv3x9wT.', 4, true),
+    ('ALU004', 'diego.hernandez@escuela.edu', '$2b$10$Dk9PNoPZIhAgQM6ABVBW2.OcxJnmlZd1Tx85RBH3fXG0KZv3x9wT.', 4, true),
+    ('ALU005', 'valeria.morales@escuela.edu', '$2b$10$Dk9PNoPZIhAgQM6ABVBW2.OcxJnmlZd1Tx85RBH3fXG0KZv3x9wT.', 4, true),
+    ('ALU006', 'alejandro.torres@escuela.edu', '$2b$10$Dk9PNoPZIhAgQM6ABVBW2.OcxJnmlZd1Tx85RBH3fXG0KZv3x9wT.', 4, true)
+ON CONFLICT (numero_cuenta) DO NOTHING;
+
+INSERT INTO Alumno (id_usuario, carrera, semestre)
+SELECT u.id_usuario, 'Ingeniería en Sistemas', 7 FROM Usuario u WHERE u.numero_cuenta = 'ALU002' ON CONFLICT DO NOTHING;
+INSERT INTO Alumno (id_usuario, carrera, semestre)
+SELECT u.id_usuario, 'Ingeniería en Sistemas', 7 FROM Usuario u WHERE u.numero_cuenta = 'ALU003' ON CONFLICT DO NOTHING;
+INSERT INTO Alumno (id_usuario, carrera, semestre)
+SELECT u.id_usuario, 'Ingeniería en Computación', 6 FROM Usuario u WHERE u.numero_cuenta = 'ALU004' ON CONFLICT DO NOTHING;
+INSERT INTO Alumno (id_usuario, carrera, semestre)
+SELECT u.id_usuario, 'Ingeniería en Computación', 6 FROM Usuario u WHERE u.numero_cuenta = 'ALU005' ON CONFLICT DO NOTHING;
+INSERT INTO Alumno (id_usuario, carrera, semestre)
+SELECT u.id_usuario, 'Ingeniería en Software', 8 FROM Usuario u WHERE u.numero_cuenta = 'ALU006' ON CONFLICT DO NOTHING;
+
+INSERT INTO Inscripcion (id_alumno, id_crn)
+SELECT a.id_alumno, (SELECT id_crn FROM CRN LIMIT 1) FROM Alumno a JOIN Usuario u ON u.id_usuario = a.id_usuario WHERE u.numero_cuenta = 'ALU002'
+ON CONFLICT DO NOTHING;
+INSERT INTO Inscripcion (id_alumno, id_crn)
+SELECT a.id_alumno, (SELECT id_crn FROM CRN ORDER BY id_crn OFFSET 1 LIMIT 1) FROM Alumno a JOIN Usuario u ON u.id_usuario = a.id_usuario WHERE u.numero_cuenta = 'ALU003'
+ON CONFLICT DO NOTHING;
+INSERT INTO Inscripcion (id_alumno, id_crn)
+SELECT a.id_alumno, (SELECT id_crn FROM CRN ORDER BY id_crn OFFSET 2 LIMIT 1) FROM Alumno a JOIN Usuario u ON u.id_usuario = a.id_usuario WHERE u.numero_cuenta = 'ALU004'
+ON CONFLICT DO NOTHING;
+INSERT INTO Inscripcion (id_alumno, id_crn)
+SELECT a.id_alumno, (SELECT id_crn FROM CRN ORDER BY id_crn OFFSET 3 LIMIT 1) FROM Alumno a JOIN Usuario u ON u.id_usuario = a.id_usuario WHERE u.numero_cuenta = 'ALU005'
+ON CONFLICT DO NOTHING;
+INSERT INTO Inscripcion (id_alumno, id_crn)
+SELECT a.id_alumno, (SELECT id_crn FROM CRN ORDER BY id_crn OFFSET 0 LIMIT 1) FROM Alumno a JOIN Usuario u ON u.id_usuario = a.id_usuario WHERE u.numero_cuenta = 'ALU006'
+ON CONFLICT DO NOTHING;
