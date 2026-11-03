@@ -51,6 +51,7 @@ Comprobar que todo conecta: abre http://localhost:3000/api/salud → debe decir 
 | GET | `/api/docentes/me/resultados` | Docente | Desglose por CRN: promedio por pregunta y comentarios anónimos |
 | GET | `/api/docentes` | Coordinador, Administrador | Docentes con sus materias |
 | GET | `/api/evaluaciones/promedio/:docenteId` | Coordinador, Administrador | Promedio y clasificación de un docente |
+| GET | `/api/participacion` | Coordinador, Administrador | Alumnos inscritos por CRN del ciclo activo y si ya respondieron (`respondio`). Sin calificaciones, promedio, fecha ni comentarios |
 
 ## Qué falta
 - **Panel de Administración**: sigue con datos locales (no hay endpoints de CRUD de usuarios, materias, preguntas ni periodos).
