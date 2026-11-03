@@ -257,14 +257,31 @@ export function listarDocentesAPI(
   return peticion<DocenteAPI[]>(`/docentes${query}`, {}, token)
 }
 
-export interface AlumnoFaltanteAPI {
+// Solo dice si el alumno respondió: nunca trae calificaciones, promedio, fecha ni comentarios
+export interface ParticipacionAPI {
   matricula: string
-  nombreAlumno: string
-  crnFaltante: number | string
-  nombreMateria: string
+  correo: string
+  carrera: string
+  semestre: number
+  crn: string
+  clave: string
+  materia: string
+  docente: string
+  respondio: boolean
 }
 
-/** GET /api/admin/faltantes (administración) */
-export function obtenerAlumnosFaltantesAPI(token: string) {
-  return peticion<{ faltantes: AlumnoFaltanteAPI[] }>('/admin/faltantes', {}, token)
+export interface ResumenParticipacion {
+  total: number
+  respondieron: number
+  pendientes: number
+  porcentaje: number
+}
+
+/** GET /api/participacion (coordinación y administración) */
+export function obtenerParticipacionAPI(token: string) {
+  return peticion<{ participacion: ParticipacionAPI[]; resumen: ResumenParticipacion }>(
+    '/participacion',
+    {},
+    token
+  )
 }
