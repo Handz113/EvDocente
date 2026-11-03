@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes';
 import alumnoRoutes from './routes/alumnoRoutes';
 import docenteRoutes from './routes/docenteRoutes';
 import adminRoutes from './routes/adminRoutes';
+import instalacionRoutes from './routes/instalacionRoutes';
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/alumno', alumnoRoutes);
 app.use('/api/docentes', docenteRoutes);
 app.use('/api/evaluaciones', evaluacionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/instalaciones', instalacionRoutes);
 
 // Manejo de rutas no encontradas (404)
 app.use((req, res) => {
