@@ -6,25 +6,60 @@ import { useNavigate } from '../../../router'
 import {
   obtenerMiPromedioAPI,
   obtenerMisResultadosAPI,
+  listarCiclosAPI,
   ErrorAPI,
   type ClasificacionDocenteAPI,
   type GrupoResultados,
+  type CicloEscolar,
 } from '../../../services/evaluacionService'
 
 export default function PanelDocente() {
   const { usuario, cerrarSesion } = useAuth()
   const navigate = useNavigate()
 
+  const [ciclos, setCiclos] = useState<CicloEscolar[]>([])
+  const [cicloSeleccionado, setCicloSeleccionado] = useState<string>('')
   const [misGrupos, setMisGrupos] = useState<GrupoResultados[]>([])
   const [crn, setCrn] = useState<string>('')
   const [desempenoAPI, setDesempenoAPI] = useState<ClasificacionDocenteAPI | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
+  // 1. Carga inicial del catálogo de ciclos escolares
   useEffect(() => {
     const token = usuario?.token || ''
-    // GET /api/evaluaciones/mi-promedio y GET /api/docentes/me/resultados
-    Promise.all([obtenerMiPromedioAPI(token), obtenerMisResultadosAPI(token)])
+    if (!token) return
+
+    listarCiclosAPI(token)
+      .then((data) => {
+        setCiclos(data)
+        const activo = data.find((c) => c.activo) || data[0]
+        if (activo) {
+          setCicloSeleccionado(String(activo.id_ciclo))
+        }
+      })
+      .catch((err) => {
+        if (err instanceof ErrorAPI && err.status === 401) {
+          cerrarSesion()
+          navigate('/personal/docente/login', { replace: true })
+          return
+        }
+        setError(err.message)
+      })
+  }, [usuario?.token])
+
+  // 2. Consulta de métricas y resultados al seleccionar un ciclo
+  useEffect(() => {
+    const token = usuario?.token || ''
+    if (!token || !cicloSeleccionado) return
+
+    setCargando(true)
+    setError('')
+
+    Promise.all([
+      obtenerMiPromedioAPI(token, cicloSeleccionado),
+      obtenerMisResultadosAPI(token, cicloSeleccionado),
+    ])
       .then(([promedio, resultados]) => {
         setDesempenoAPI(promedio)
         setMisGrupos(resultados.grupos)
@@ -39,7 +74,7 @@ export default function PanelDocente() {
         setError(err.message)
       })
       .finally(() => setCargando(false))
-  }, [usuario?.token])
+  }, [usuario?.token, cicloSeleccionado])
 
   const grupo = misGrupos.find((m) => m.crn === crn) || misGrupos[0]
   const promedioGeneral = desempenoAPI?.promedio ?? null
@@ -47,15 +82,38 @@ export default function PanelDocente() {
 
   return (
     <Layout titulo="Docente" tono="personal">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Resultados y Desempeño Docente</h1>
-        <p className="text-sm text-[#5d6678]">
-          Promedios calculados en tiempo real a partir de las evaluaciones anónimas de tus alumnos.
-        </p>
-        {error && (
-          <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mt-4">{error}</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Resultados y Desempeño Docente</h1>
+          <p className="text-sm text-[#5d6678]">
+            Promedios calculados en tiempo real a partir de las evaluaciones anónimas de tus alumnos.
+          </p>
+        </div>
+
+        {ciclos.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label htmlFor="selector-ciclo" className="text-xs font-semibold text-[#5d6678] whitespace-nowrap">
+              Periodo escolar:
+            </label>
+            <select
+              id="selector-ciclo"
+              value={cicloSeleccionado}
+              onChange={(e) => setCicloSeleccionado(e.target.value)}
+              className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] focus:outline-none shadow-xs cursor-pointer"
+            >
+              {ciclos.map((c) => (
+                <option key={c.id_ciclo} value={String(c.id_ciclo)}>
+                  {c.nombre} {c.activo ? '(Activo)' : '(Histórico)'}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
+
+      {error && (
+        <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mb-6">{error}</p>
+      )}
 
       {/* Indicadores KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

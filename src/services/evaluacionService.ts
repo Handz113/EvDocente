@@ -34,6 +34,14 @@ export interface PeriodoItem {
   activo: boolean
 }
 
+export interface CicloEscolar {
+  id_ciclo: number
+  nombre: string
+  fecha_inicio_eval?: string
+  fecha_cierre_eval?: string
+  activo: boolean
+}
+
 export interface EvaluacionPayload {
   crn: number
   calificaciones: number[]
@@ -191,19 +199,28 @@ export function enviarEvaluacionAPI(
   )
 }
 
+/** GET /api/ciclos — catálogo general de ciclos escolares */
+export function listarCiclosAPI(token: string): Promise<CicloEscolar[]> {
+  return peticion<CicloEscolar[]>('/ciclos', {}, token)
+}
+
 /** GET /api/evaluaciones/promedio/:docenteId (coordinación y administración) */
 export function obtenerPromedioDocenteAPI(
   docenteId: number | string,
   token: string,
-  periodo?: string
+  id_ciclo?: number | string
 ): Promise<ClasificacionDocenteAPI> {
-  const query = periodo ? `?periodo=${encodeURIComponent(periodo)}` : ''
+  const query = id_ciclo !== undefined && id_ciclo !== '' ? `?id_ciclo=${encodeURIComponent(id_ciclo)}` : ''
   return peticion<ClasificacionDocenteAPI>(`/evaluaciones/promedio/${docenteId}${query}`, {}, token)
 }
 
 /** GET /api/evaluaciones/mi-promedio (docente) */
-export function obtenerMiPromedioAPI(token: string) {
-  return peticion<ClasificacionDocenteAPI>('/evaluaciones/mi-promedio', {}, token)
+export function obtenerMiPromedioAPI(
+  token: string,
+  id_ciclo?: number | string
+): Promise<ClasificacionDocenteAPI> {
+  const query = id_ciclo !== undefined && id_ciclo !== '' ? `?id_ciclo=${encodeURIComponent(id_ciclo)}` : ''
+  return peticion<ClasificacionDocenteAPI>(`/evaluaciones/mi-promedio${query}`, {}, token)
 }
 
 export interface GrupoResultados {
@@ -219,8 +236,12 @@ export interface GrupoResultados {
 }
 
 /** GET /api/docentes/me/resultados (docente) */
-export function obtenerMisResultadosAPI(token: string) {
-  return peticion<{ grupos: GrupoResultados[] }>('/docentes/me/resultados', {}, token)
+export function obtenerMisResultadosAPI(
+  token: string,
+  id_ciclo?: number | string
+): Promise<{ grupos: GrupoResultados[] }> {
+  const query = id_ciclo !== undefined && id_ciclo !== '' ? `?id_ciclo=${encodeURIComponent(id_ciclo)}` : ''
+  return peticion<{ grupos: GrupoResultados[] }>(`/docentes/me/resultados${query}`, {}, token)
 }
 
 export interface DocenteAPI extends DocenteResumen {
@@ -228,8 +249,12 @@ export interface DocenteAPI extends DocenteResumen {
 }
 
 /** GET /api/docentes (coordinación y administración) */
-export function listarDocentesAPI(token: string) {
-  return peticion<DocenteAPI[]>('/docentes', {}, token)
+export function listarDocentesAPI(
+  token: string,
+  id_ciclo?: number | string
+): Promise<DocenteAPI[]> {
+  const query = id_ciclo !== undefined && id_ciclo !== '' ? `?id_ciclo=${encodeURIComponent(id_ciclo)}` : ''
+  return peticion<DocenteAPI[]>(`/docentes${query}`, {}, token)
 }
 
 export interface AlumnoFaltanteAPI {
