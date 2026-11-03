@@ -5,8 +5,7 @@ import evaluacionRoutes from './routes/evaluacionRoutes';
 import authRoutes from './routes/authRoutes';
 import alumnoRoutes from './routes/alumnoRoutes';
 import docenteRoutes from './routes/docenteRoutes';
-import adminRoutes from './routes/adminRoutes';
-import instalacionRoutes from './routes/instalacionRoutes';
+import participacionRoutes from './routes/participacionRoutes';
 
 const app = express();
 
@@ -29,13 +28,11 @@ app.get('/api/salud', async (_req, res) => {
   }
 });
 
-// Rutas de autenticación (login, recuperación de contraseñas)
 app.use('/api/auth', authRoutes);
 app.use('/api/alumno', alumnoRoutes);
 app.use('/api/docentes', docenteRoutes);
 app.use('/api/evaluaciones', evaluacionRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/instalaciones', instalacionRoutes);
+app.use('/api/participacion', participacionRoutes);
 
 // Manejo de rutas no encontradas (404)
 app.use((req, res) => {

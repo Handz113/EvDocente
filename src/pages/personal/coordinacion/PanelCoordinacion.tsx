@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '../../../components/Layout'
 import Barra from '../../../components/Barra'
+import ParticipacionAlumnos from '../../../components/ParticipacionAlumnos'
 import { useAuth } from '../../../context/AuthContext'
 import { useNavigate } from '../../../router'
 import {
@@ -207,6 +208,9 @@ export default function PanelCoordinacion() {
           </table>
         </div>
       </div>
+
+      {/* Participación: solo Respondió / Pendiente, sin calificaciones */}
+      <ParticipacionAlumnos area="coordinacion" />
 
       {/* Modal / Sección de detalle docente */}
       {docenteDetalle && (
