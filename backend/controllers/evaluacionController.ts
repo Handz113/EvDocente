@@ -198,8 +198,9 @@ export const calcularClasificacionDocente = (calificaciones: number[]): Resultad
  */
 export const obtenerPromedioDocente = async (req: Request, res: Response): Promise<void> => {
   try {
-    const paramId = req.params.docenteId || req.params.id;
-    const docenteId = parseInt(paramId, 10);
+    // Express 5 tipa los params como string | string[]; estas rutas (:docenteId, :id) siempre dan string
+    const paramId = (req.params.docenteId || req.params.id) as string | undefined;
+    const docenteId = parseInt(paramId ?? '', 10);
 
     if (!paramId || isNaN(docenteId)) {
       res.status(400).json({

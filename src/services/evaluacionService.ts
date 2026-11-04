@@ -127,7 +127,7 @@ export class ErrorAPI extends Error {
   }
 }
 
-async function peticion<T>(ruta: string, opciones: RequestInit = {}, token?: string): Promise<T> {
+export async function peticion<T>(ruta: string, opciones: RequestInit = {}, token?: string): Promise<T> {
   let response: Response
   try {
     response = await fetch(`/api${ruta}`, {
@@ -221,6 +221,11 @@ export interface GrupoResultados {
 /** GET /api/docentes/me/resultados (docente) */
 export function obtenerMisResultadosAPI(token: string) {
   return peticion<{ grupos: GrupoResultados[] }>('/docentes/me/resultados', {}, token)
+}
+
+/** GET /api/docentes/:id/resultados (coordinación y administración) */
+export function obtenerResultadosDocenteAPI(docenteId: number | string, token: string) {
+  return peticion<{ grupos: GrupoResultados[] }>(`/docentes/${docenteId}/resultados`, {}, token)
 }
 
 export interface DocenteAPI extends DocenteResumen {

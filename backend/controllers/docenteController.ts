@@ -42,9 +42,66 @@ export const listarDocentes = async (_req: AuthRequest, res: Response): Promise<
 };
 
 /**
+ * Resultados de un docente en el ciclo activo, desglosados por grupo (CRN):
+ * promedio, clasificación, promedio por pregunta y comentarios anónimos.
+ * Anonimato: nunca se consulta id_alumno, matrícula, correo ni fecha; los
+ * comentarios salen solo como texto y en orden aleatorio.
+ * La usan GET /api/docentes/me/resultados y GET /api/docentes/:id/resultados.
+ */
+export const obtenerResultadosDocente = async (idDocente: number | string) => {
+  const grupos = await pool.query(
+    `SELECT c.id_crn, c.crn, m.clave, m.nombre, COUNT(e.id_evaluacion)::int AS total,
+            AVG(e.promedio) AS promedio
+     FROM CRN c
+     INNER JOIN Materia m ON m.id_materia = c.id_materia
+     INNER JOIN CicloEscolar ce ON ce.id_ciclo = c.id_ciclo AND ce.activo = TRUE
+     LEFT JOIN Evaluacion e ON e.id_crn = c.id_crn
+     WHERE c.id_docente = $1
+     GROUP BY c.id_crn, m.clave, m.nombre
+     ORDER BY m.nombre`,
+    [idDocente]
+  );
+
+  const porPregunta = await pool.query(
+    `SELECT e.id_crn, p.id_pregunta, p.texto, AVG(r.valor) AS promedio
+     FROM Respuesta r
+     INNER JOIN Evaluacion e ON e.id_evaluacion = r.id_evaluacion
+     INNER JOIN Pregunta p ON p.id_pregunta = r.id_pregunta
+     INNER JOIN CRN c ON c.id_crn = e.id_crn
+     WHERE c.id_docente = $1
+     GROUP BY e.id_crn, p.id_pregunta, p.texto
+     ORDER BY p.id_pregunta`,
+    [idDocente]
+  );
+
+  // Solo el texto: nunca se devuelve quién escribió el comentario ni la fecha exacta
+  const comentarios = await pool.query(
+    `SELECT e.id_crn, e.comentarios
+     FROM Evaluacion e
+     INNER JOIN CRN c ON c.id_crn = e.id_crn
+     WHERE c.id_docente = $1 AND e.comentarios IS NOT NULL AND TRIM(e.comentarios) <> ''
+     ORDER BY random()`,
+    [idDocente]
+  );
+
+  return {
+    grupos: grupos.rows.map((g) => ({
+      crn: String(g.crn),
+      clave: g.clave,
+      nombre: g.nombre,
+      totalEvaluaciones: g.total,
+      ...calcularClasificacionDocente(g.promedio === null ? [] : [Number(g.promedio)]),
+      porPregunta: porPregunta.rows
+        .filter((p) => p.id_crn === g.id_crn)
+        .map((p) => ({ id: p.id_pregunta, texto: p.texto, promedio: Number(p.promedio) })),
+      comentarios: comentarios.rows.filter((c) => c.id_crn === g.id_crn).map((c) => c.comentarios),
+    })),
+  };
+};
+
+/**
  * GET /api/docentes/me/resultados
- * Resultados del docente del token, desglosados por grupo (CRN):
- * promedio por pregunta y comentarios anónimos.
+ * Resultados del docente del token (req.user.id).
  */
 export const misResultados = async (req: AuthRequest, res: Response): Promise<void> => {
   const idDocente = req.user?.id;
@@ -54,54 +111,31 @@ export const misResultados = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   try {
-    const grupos = await pool.query(
-      `SELECT c.id_crn, c.crn, m.clave, m.nombre, COUNT(e.id_evaluacion)::int AS total,
-              AVG(e.promedio) AS promedio
-       FROM CRN c
-       INNER JOIN Materia m ON m.id_materia = c.id_materia
-       INNER JOIN CicloEscolar ce ON ce.id_ciclo = c.id_ciclo AND ce.activo = TRUE
-       LEFT JOIN Evaluacion e ON e.id_crn = c.id_crn
-       WHERE c.id_docente = $1
-       GROUP BY c.id_crn, m.clave, m.nombre
-       ORDER BY m.nombre`,
-      [idDocente]
-    );
+    res.json(await obtenerResultadosDocente(idDocente));
+  } catch (error) {
+    console.error('Error al obtener resultados del docente:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor al obtener los resultados.' });
+  }
+};
 
-    const porPregunta = await pool.query(
-      `SELECT e.id_crn, p.id_pregunta, p.texto, AVG(r.valor) AS promedio
-       FROM Respuesta r
-       INNER JOIN Evaluacion e ON e.id_evaluacion = r.id_evaluacion
-       INNER JOIN Pregunta p ON p.id_pregunta = r.id_pregunta
-       INNER JOIN CRN c ON c.id_crn = e.id_crn
-       WHERE c.id_docente = $1
-       GROUP BY e.id_crn, p.id_pregunta, p.texto
-       ORDER BY p.id_pregunta`,
-      [idDocente]
-    );
+/**
+ * GET /api/docentes/:id/resultados (Coordinador, Administrador)
+ * Lo mismo que /me/resultados, para el docente indicado (id_docente).
+ */
+export const resultadosDeDocente = async (req: AuthRequest, res: Response): Promise<void> => {
+  const idDocente = Number(req.params.id);
+  if (!Number.isInteger(idDocente) || idDocente <= 0) {
+    res.status(400).json({ mensaje: 'Identificador de docente inválido. Se requiere un ID numérico.' });
+    return;
+  }
 
-    // Solo el texto: nunca se devuelve quién escribió el comentario ni la fecha exacta
-    const comentarios = await pool.query(
-      `SELECT e.id_crn, e.comentarios
-       FROM Evaluacion e
-       INNER JOIN CRN c ON c.id_crn = e.id_crn
-       WHERE c.id_docente = $1 AND e.comentarios IS NOT NULL AND TRIM(e.comentarios) <> ''
-       ORDER BY random()`,
-      [idDocente]
-    );
-
-    res.json({
-      grupos: grupos.rows.map((g) => ({
-        crn: String(g.crn),
-        clave: g.clave,
-        nombre: g.nombre,
-        totalEvaluaciones: g.total,
-        ...calcularClasificacionDocente(g.promedio === null ? [] : [Number(g.promedio)]),
-        porPregunta: porPregunta.rows
-          .filter((p) => p.id_crn === g.id_crn)
-          .map((p) => ({ id: p.id_pregunta, texto: p.texto, promedio: Number(p.promedio) })),
-        comentarios: comentarios.rows.filter((c) => c.id_crn === g.id_crn).map((c) => c.comentarios),
-      })),
-    });
+  try {
+    const existe = await pool.query('SELECT 1 FROM Docente WHERE id_docente = $1', [idDocente]);
+    if (existe.rows.length === 0) {
+      res.status(404).json({ mensaje: `No se encontró el docente con ID ${idDocente}.` });
+      return;
+    }
+    res.json(await obtenerResultadosDocente(idDocente));
   } catch (error) {
     console.error('Error al obtener resultados del docente:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor al obtener los resultados.' });
