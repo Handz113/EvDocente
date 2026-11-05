@@ -7,8 +7,10 @@ import { useNavigate } from '../../../router'
 import {
   listarDocentesAPI,
   obtenerPromedioDocenteAPI,
+  listarCiclosAPI,
   ErrorAPI,
   type DocenteAPI,
+  type CicloEscolar,
 } from '../../../services/evaluacionService'
 
 interface DocenteConMetricas {
@@ -26,20 +28,48 @@ interface DocenteConMetricas {
 export default function PanelCoordinacion() {
   const { usuario, cerrarSesion } = useAuth()
   const navigate = useNavigate()
+  const [ciclos, setCiclos] = useState<CicloEscolar[]>([])
+  const [cicloSeleccionado, setCicloSeleccionado] = useState<string>('')
   const [area, setArea] = useState('todas')
   const [orden, setOrden] = useState<'mayor' | 'menor'>('mayor')
   const [seleccionId, setSeleccionId] = useState<string | null>(null)
   const [listaDocentes, setListaDocentes] = useState<DocenteConMetricas[]>([])
   const [error, setError] = useState('')
 
+  // 1. Carga inicial del catálogo de ciclos escolares
   useEffect(() => {
     const token = usuario?.token || ''
+    if (!token) return
+
+    listarCiclosAPI(token)
+      .then((data) => {
+        setCiclos(data)
+        const activo = data.find((c) => c.activo) || data[0]
+        if (activo) {
+          setCicloSeleccionado(String(activo.id_ciclo))
+        }
+      })
+      .catch((err) => {
+        if (err instanceof ErrorAPI && err.status === 401) {
+          cerrarSesion()
+          navigate('/personal/coordinacion/login', { replace: true })
+          return
+        }
+        setError(err.message)
+      })
+  }, [usuario?.token])
+
+  // 2. Consulta de docentes y métricas asociadas al ciclo seleccionado
+  useEffect(() => {
+    const token = usuario?.token || ''
+    if (!token || !cicloSeleccionado) return
+
     const consultarDocentes = async () => {
-      // GET /api/docentes y, por cada uno, GET /api/evaluaciones/promedio/:id
-      const docentes = await listarDocentesAPI(token)
+      setError('')
+      const docentes = await listarDocentesAPI(token, cicloSeleccionado)
       const metricas: DocenteConMetricas[] = await Promise.all(
         docentes.map(async (d) => {
-          const apiRes = await obtenerPromedioDocenteAPI(d.id, token)
+          const apiRes = await obtenerPromedioDocenteAPI(d.id, token, cicloSeleccionado)
           return {
             id: d.id,
             nombre: d.nombre,
@@ -64,7 +94,7 @@ export default function PanelCoordinacion() {
       }
       setError(err.message)
     })
-  }, [usuario?.token])
+  }, [usuario?.token, cicloSeleccionado])
 
   const areasDisponibles = [...new Set(listaDocentes.map((r) => r.area))]
 
@@ -91,7 +121,7 @@ export default function PanelCoordinacion() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Panel de Coordinación Académica</h1>
         <p className="text-sm text-[#5d6678]">
-          Monitoreo de desempeño para asignación docente del ciclo activo.
+          Monitoreo de desempeño para asignación docente (ciclos activos e históricos).
         </p>
         {error && (
           <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mt-4">{error}</p>
@@ -134,6 +164,20 @@ export default function PanelCoordinacion() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
           <h2 className="text-lg font-bold text-[#1c2333]">Evaluación por Docente</h2>
           <div className="flex gap-2 flex-wrap">
+            {ciclos.length > 0 && (
+              <select
+                value={cicloSeleccionado}
+                onChange={(e) => setCicloSeleccionado(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+              >
+                {ciclos.map((c) => (
+                  <option key={c.id_ciclo} value={String(c.id_ciclo)}>
+                    {c.nombre} {c.activo ? '(Activo)' : '(Histórico)'}
+                  </option>
+                ))}
+              </select>
+            )}
+
             <select
               value={area}
               onChange={(e) => setArea(e.target.value)}

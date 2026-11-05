@@ -5,11 +5,22 @@ import { calcularClasificacionDocente } from './evaluacionController';
 
 /**
  * GET /api/docentes
- * Lista de docentes con sus materias del ciclo activo (para coordinación y administración).
+ * Lista de docentes con sus materias del ciclo solicitado o activo (para coordinación y administración).
+ * Acepta parámetro opcional en query: ?id_ciclo=N
+ * Si no se proporciona id_ciclo, filtra por el ciclo escolar activo por defecto.
  * Los promedios se piden aparte a GET /api/evaluaciones/promedio/:docenteId.
  */
-export const listarDocentes = async (_req: AuthRequest, res: Response): Promise<void> => {
+export const listarDocentes = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const idCicloRaw = req.query.id_ciclo;
+    const idCiclo =
+      idCicloRaw && !isNaN(Number(idCicloRaw)) && Number(idCicloRaw) > 0 ? Number(idCicloRaw) : null;
+
+    const filtroCiclo = idCiclo
+      ? 'AND c.id_ciclo = $1'
+      : 'AND c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE)';
+    const queryParams: any[] = idCiclo ? [idCiclo] : [];
+
     const { rows } = await pool.query(
       `SELECT d.id_docente, d.nombre, d.apellido, d.departamento, u.correo_institucional,
               COALESCE(
@@ -20,10 +31,11 @@ export const listarDocentes = async (_req: AuthRequest, res: Response): Promise<
        FROM Docente d
        INNER JOIN Usuario u ON u.id_usuario = d.id_usuario
        LEFT JOIN CRN c ON c.id_docente = d.id_docente
-         AND c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE)
+         ${filtroCiclo}
        LEFT JOIN Materia m ON m.id_materia = c.id_materia
        GROUP BY d.id_docente, u.correo_institucional
-       ORDER BY d.apellido, d.nombre`
+       ORDER BY d.apellido, d.nombre`,
+      queryParams
     );
 
     res.json(
@@ -45,6 +57,8 @@ export const listarDocentes = async (_req: AuthRequest, res: Response): Promise<
  * GET /api/docentes/me/resultados
  * Resultados del docente del token, desglosados por grupo (CRN):
  * promedio por pregunta y comentarios anónimos.
+ * Acepta parámetro opcional en query: ?id_ciclo=N
+ * Si no se proporciona id_ciclo, filtra por el ciclo escolar activo por defecto.
  */
 export const misResultados = async (req: AuthRequest, res: Response): Promise<void> => {
   const idDocente = req.user?.id;
@@ -54,17 +68,26 @@ export const misResultados = async (req: AuthRequest, res: Response): Promise<vo
   }
 
   try {
+    const idCicloRaw = req.query.id_ciclo;
+    const idCiclo =
+      idCicloRaw && !isNaN(Number(idCicloRaw)) && Number(idCicloRaw) > 0 ? Number(idCicloRaw) : null;
+
+    const filtroCiclo = idCiclo
+      ? 'c.id_ciclo = $2'
+      : 'c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE)';
+    const queryParams: any[] = idCiclo ? [idDocente, idCiclo] : [idDocente];
+
     const grupos = await pool.query(
       `SELECT c.id_crn, c.crn, m.clave, m.nombre, COUNT(e.id_evaluacion)::int AS total,
               AVG(e.promedio) AS promedio
        FROM CRN c
        INNER JOIN Materia m ON m.id_materia = c.id_materia
-       INNER JOIN CicloEscolar ce ON ce.id_ciclo = c.id_ciclo AND ce.activo = TRUE
+       INNER JOIN CicloEscolar ce ON ce.id_ciclo = c.id_ciclo
        LEFT JOIN Evaluacion e ON e.id_crn = c.id_crn
-       WHERE c.id_docente = $1
+       WHERE c.id_docente = $1 AND ${filtroCiclo}
        GROUP BY c.id_crn, m.clave, m.nombre
        ORDER BY m.nombre`,
-      [idDocente]
+      queryParams
     );
 
     const porPregunta = await pool.query(
@@ -73,10 +96,10 @@ export const misResultados = async (req: AuthRequest, res: Response): Promise<vo
        INNER JOIN Evaluacion e ON e.id_evaluacion = r.id_evaluacion
        INNER JOIN Pregunta p ON p.id_pregunta = r.id_pregunta
        INNER JOIN CRN c ON c.id_crn = e.id_crn
-       WHERE c.id_docente = $1
+       WHERE c.id_docente = $1 AND ${filtroCiclo}
        GROUP BY e.id_crn, p.id_pregunta, p.texto
        ORDER BY p.id_pregunta`,
-      [idDocente]
+      queryParams
     );
 
     // Solo el texto: nunca se devuelve quién escribió el comentario ni la fecha exacta
@@ -84,9 +107,9 @@ export const misResultados = async (req: AuthRequest, res: Response): Promise<vo
       `SELECT e.id_crn, e.comentarios
        FROM Evaluacion e
        INNER JOIN CRN c ON c.id_crn = e.id_crn
-       WHERE c.id_docente = $1 AND e.comentarios IS NOT NULL AND TRIM(e.comentarios) <> ''
+       WHERE c.id_docente = $1 AND ${filtroCiclo} AND e.comentarios IS NOT NULL AND TRIM(e.comentarios) <> ''
        ORDER BY random()`,
-      [idDocente]
+      queryParams
     );
 
     res.json({
