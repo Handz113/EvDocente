@@ -66,7 +66,7 @@ export default function LoginArea() {
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 mb-5">
+        <div className="flex flex-col gap-1.5 mb-2">
           <label htmlFor="pass" className="text-xs font-semibold text-[#1c2333]">
             Contraseña
           </label>
@@ -78,6 +78,15 @@ export default function LoginArea() {
             placeholder="••••••••"
             className="w-full px-3.5 py-2.5 rounded-xl border border-[#e2e6ef] bg-white text-sm focus:border-[#0f766e] focus:ring-2 focus:ring-[#0f766e]/20 transition-all"
           />
+        </div>
+
+        <div className="flex justify-end mb-5">
+          <Link
+            to="/recuperar-password"
+            className="text-xs font-medium text-[#0f766e] hover:text-[#0c5c56] hover:underline transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
         </div>
 
         {error && <p className="text-xs text-[#dc2626] font-semibold mb-4 text-center">{error}</p>}
