@@ -1,6 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import Layout from '../../../components/Layout'
 import ParticipacionAlumnos from '../../../components/ParticipacionAlumnos'
+import GestionInstalaciones from '../../../components/GestionInstalaciones'
+import ResultadosInstalaciones from '../../../components/ResultadosInstalaciones'
 import {
   DOCENTES_CATALOGO,
   MATERIAS_CATALOGO,
@@ -19,6 +21,7 @@ const pestañas = [
   { id: 'preguntas', nombre: 'Preguntas' },
   { id: 'periodos', nombre: 'Periodos' },
   { id: 'participacion', nombre: 'Participación' },
+  { id: 'instalaciones', nombre: 'Talleres y Labs' },
 ]
 
 interface UsuarioPersonal {
@@ -213,6 +216,14 @@ export default function PanelAdministracion() {
 
       {/* Datos de la BD: solo lectura, sin agregar/eliminar */}
       {activa === 'participacion' && <ParticipacionAlumnos area="administracion" />}
+
+      {/* Talleres y laboratorios: catálogo en la BD y resultados */}
+      {activa === 'instalaciones' && (
+        <>
+          <GestionInstalaciones />
+          <ResultadosInstalaciones area="administracion" />
+        </>
+      )}
     </Layout>
   )
 }

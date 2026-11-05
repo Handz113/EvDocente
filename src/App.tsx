@@ -9,6 +9,7 @@ import LoginAlumno from './pages/alumno/LoginAlumno'
 import InicioAlumno from './pages/alumno/InicioAlumno'
 import Evaluacion from './pages/alumno/Evaluacion'
 import Confirmacion from './pages/alumno/Confirmacion'
+import EvaluacionInstalacion from './pages/alumno/EvaluacionInstalacion'
 
 // Interfaz de personal
 import LoginPersonal from './pages/personal/LoginPersonal'
@@ -37,6 +38,14 @@ export default function App() {
         element={
           <RutaProtegida rol="alumno">
             <Evaluacion />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path="/alumno/instalacion/:id"
+        element={
+          <RutaProtegida rol="alumno">
+            <EvaluacionInstalacion />
           </RutaProtegida>
         }
       />

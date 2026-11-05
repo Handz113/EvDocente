@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from '../../router'
 import Layout from '../../components/Layout'
+import TalleresAlumno from '../../components/TalleresAlumno'
 import { useAuth } from '../../context/AuthContext'
 import {
   obtenerMateriasAlumnoAPI,
@@ -112,6 +113,9 @@ export default function InicioAlumno() {
           </article>
         ))}
       </div>
+
+      {/* Módulo Talleres y Laboratorios */}
+      <TalleresAlumno />
     </Layout>
   )
 }

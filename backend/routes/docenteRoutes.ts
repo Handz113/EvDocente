@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listarDocentes, misResultados } from '../controllers/docenteController';
+import { listarDocentes, misResultados, resultadosDeDocente } from '../controllers/docenteController';
 import { verificarToken, verificarRol } from '../middlewares/auth';
 
 const router = Router();
@@ -9,5 +9,8 @@ router.get('/', verificarToken, verificarRol(['Administrador', 'Coordinador']), 
 
 /** GET /api/docentes/me/resultados — desglose por grupo del docente del token */
 router.get('/me/resultados', verificarToken, verificarRol(['Docente']), misResultados);
+
+/** GET /api/docentes/:id/resultados — mismo desglose para el docente indicado (va después de /me/resultados) */
+router.get('/:id/resultados', verificarToken, verificarRol(['Coordinador', 'Administrador']), resultadosDeDocente);
 
 export default router;
