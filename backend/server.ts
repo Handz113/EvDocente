@@ -10,6 +10,7 @@ import docenteRoutes from './routes/docenteRoutes';
 import cicloRoutes from './routes/cicloRoutes';
 import participacionRoutes from './routes/participacionRoutes';
 import instalacionRoutes from './routes/instalacionRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/evaluaciones', evaluacionRoutes);
 app.use('/api/ciclos', cicloRoutes);
 app.use('/api/participacion', participacionRoutes);
 app.use('/api/instalaciones', instalacionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // =========================
 // FRONTEND COMPILADO (producción)
