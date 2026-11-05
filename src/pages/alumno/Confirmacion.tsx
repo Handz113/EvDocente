@@ -3,6 +3,7 @@ import Layout from '../../components/Layout'
 
 interface LocationState {
   materia?: string
+  instalacion?: string
 }
 
 export default function Confirmacion() {
@@ -19,13 +20,19 @@ export default function Confirmacion() {
           ¡Evaluación enviada exitosamente!
         </h2>
         <p className="text-sm text-[#5d6678] mb-6 leading-relaxed">
-          Tus respuestas{state?.materia ? ` correspondientes a la materia "${state.materia}"` : ''} fueron almacenadas de forma confidencial y anónima en la plataforma institucional.
+          Tus respuestas
+          {state?.instalacion
+            ? ` sobre la instalación "${state.instalacion}"`
+            : state?.materia
+              ? ` correspondientes a la materia "${state.materia}"`
+              : ''}{' '}
+          fueron almacenadas de forma confidencial y anónima en la plataforma institucional.
         </p>
         <button
           onClick={() => navigate('/alumno/inicio')}
           className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#2557d6] hover:bg-[#1f47b2] text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
         >
-          Volver a mis materias
+          {state?.instalacion ? 'Volver al inicio' : 'Volver a mis materias'}
         </button>
       </div>
     </Layout>

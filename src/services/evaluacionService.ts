@@ -135,7 +135,7 @@ export class ErrorAPI extends Error {
   }
 }
 
-async function peticion<T>(ruta: string, opciones: RequestInit = {}, token?: string): Promise<T> {
+export async function peticion<T>(ruta: string, opciones: RequestInit = {}, token?: string): Promise<T> {
   let response: Response
   try {
     response = await fetch(`/api${ruta}`, {
@@ -242,6 +242,16 @@ export function obtenerMisResultadosAPI(
 ): Promise<{ grupos: GrupoResultados[] }> {
   const query = id_ciclo !== undefined && id_ciclo !== '' ? `?id_ciclo=${encodeURIComponent(id_ciclo)}` : ''
   return peticion<{ grupos: GrupoResultados[] }>(`/docentes/me/resultados${query}`, {}, token)
+}
+
+/** GET /api/docentes/:id/resultados (coordinación y administración) */
+export function obtenerResultadosDocenteAPI(
+  docenteId: number | string,
+  token: string,
+  id_ciclo?: number | string
+) {
+  const query = id_ciclo !== undefined && id_ciclo !== '' ? `?id_ciclo=${encodeURIComponent(id_ciclo)}` : ''
+  return peticion<{ grupos: GrupoResultados[] }>(`/docentes/${docenteId}/resultados${query}`, {}, token)
 }
 
 export interface DocenteAPI extends DocenteResumen {

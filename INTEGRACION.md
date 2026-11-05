@@ -12,11 +12,14 @@ Abre una terminal (en Windows: *SQL Shell (psql)* o PowerShell con `psql` en el 
 psql -U postgres -c "CREATE DATABASE \"EvaluacionDocentes\""
 psql -U postgres -d EvaluacionDocentes -f sql/carga_inicial.sql
 psql -U postgres -d EvaluacionDocentes -f sql/datos_prueba.sql
+psql -U postgres -d EvaluacionDocentes -f sql/modulo_talleres_laboratorios.sql
 ```
+
+> `modulo_talleres_laboratorios.sql` va **después** de los otros dos porque sus tablas hacen referencia a `Alumno` y `CicloEscolar`. Crea `Instalacion`, `PreguntaInstalacion`, `EvaluacionInstalacion` y `RespuestaInstalacion`, más 2 instalaciones y 7 preguntas de ejemplo. Solo se corre una vez (si lo repites, falla porque las tablas ya existen).
 
 > El error `database "EvaluacionDocentes" already exists` al correr `carga_inicial.sql` es normal: la primera línea del script intenta crearla otra vez. Las tablas sí se crean.
 
-También puedes hacerlo desde pgAdmin: crea la BD `EvaluacionDocentes` y ejecuta los dos `.sql` en el Query Tool.
+También puedes hacerlo desde pgAdmin: crea la BD `EvaluacionDocentes` y ejecuta los tres `.sql` en el Query Tool, en el mismo orden.
 
 ## 3. Configurar el `.env`
 Copia `.env.example` como `.env` y pon tu contraseña de Postgres en `DB_PASSWORD` y cualquier texto largo en `JWT_SECRET`.
@@ -52,6 +55,15 @@ Comprobar que todo conecta: abre http://localhost:3000/api/salud → debe decir 
 | GET | `/api/docentes` | Coordinador, Administrador | Docentes con sus materias |
 | GET | `/api/evaluaciones/promedio/:docenteId` | Coordinador, Administrador | Promedio y clasificación de un docente |
 | GET | `/api/participacion` | Coordinador, Administrador | Alumnos inscritos por CRN del ciclo activo y si ya respondieron (`respondio`). Sin calificaciones, promedio, fecha ni comentarios |
+| GET | `/api/instalaciones` | Alumno | Talleres y laboratorios activos y si el alumno ya evaluó cada uno en el ciclo activo (`evaluada`) |
+| GET | `/api/instalaciones/:id/preguntas` | Alumno | Datos de la instalación, `evaluada` y sus preguntas activas (generales + propias), ordenadas por dimensión |
+| POST | `/api/instalaciones/:id/evaluacion` | Alumno | `{respuestas: [{idPregunta, valor}], comentarios?}`. Valores 0, 2.5, 5, 7.5 o 10; exactamente todas las preguntas activas, una vez cada una. 400 si ya evaluó en el ciclo |
+| GET | `/api/instalaciones/resultados` | Coordinador, Administrador | Por instalación: total, promedio general, por dimensión, por pregunta y comentarios anónimos en orden aleatorio. Ciclo activo por defecto; acepta `?id_ciclo=` |
+| GET | `/api/instalaciones/catalogo` | Administrador | Todas las instalaciones y preguntas, incluidas inactivas |
+| POST | `/api/instalaciones` | Administrador | `{nombre, tipo, descripcion?}`. 400 si el nombre ya existe |
+| PATCH | `/api/instalaciones/:id` | Administrador | Cualquiera de `{nombre, tipo, descripcion, activa}` |
+| POST | `/api/instalaciones/preguntas` | Administrador | `{id_instalacion, dimension, texto}`. `id_instalacion: null` = aplica a todas. Dimensión: Equipamiento, Disponibilidad o Limpieza |
+| PATCH | `/api/instalaciones/preguntas/:id` | Administrador | Cualquiera de `{id_instalacion, dimension, texto, activa}`. Las preguntas no se borran, solo se desactivan |
 
 ## Qué falta
 - **Panel de Administración**: sigue con datos locales (no hay endpoints de CRUD de usuarios, materias, preguntas ni periodos).

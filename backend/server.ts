@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'node:path';
+import fs from 'node:fs';
 import 'dotenv/config';
 import pool from './config/db';
 import evaluacionRoutes from './routes/evaluacionRoutes';
@@ -7,6 +9,7 @@ import alumnoRoutes from './routes/alumnoRoutes';
 import docenteRoutes from './routes/docenteRoutes';
 import cicloRoutes from './routes/cicloRoutes';
 import participacionRoutes from './routes/participacionRoutes';
+import instalacionRoutes from './routes/instalacionRoutes';
 
 const app = express();
 
@@ -36,6 +39,24 @@ app.use('/api/docentes', docenteRoutes);
 app.use('/api/evaluaciones', evaluacionRoutes);
 app.use('/api/ciclos', cicloRoutes);
 app.use('/api/participacion', participacionRoutes);
+app.use('/api/instalaciones', instalacionRoutes);
+
+// =========================
+// FRONTEND COMPILADO (producción)
+// =========================
+// Si existe dist/ (npm run build), este mismo servidor entrega la app de React.
+// Cualquier ruta que no empiece con /api devuelve index.html para que el router
+// del frontend resuelva /alumno/inicio, /personal/..., etc. En local, sin dist/,
+// no cambia nada: el frontend lo sirve Vite.
+const carpetaDist = path.resolve(process.cwd(), 'dist');
+const indexHtml = path.join(carpetaDist, 'index.html');
+if (fs.existsSync(indexHtml)) {
+    app.use(express.static(carpetaDist));
+    // Express 5 ya no acepta '*': se usa una expresión regular que excluye /api
+    app.get(/^(?!\/api).*/, (_req, res) => {
+        res.sendFile(indexHtml);
+    });
+}
 
 // Manejo de rutas no encontradas (404)
 app.use((req, res) => {
@@ -45,8 +66,9 @@ app.use((req, res) => {
 // =========================
 // INICIO DEL SERVIDOR
 // =========================
-// BACKEND_PORT para no chocar con PORT, que Vite usa para el frontend
-const PORT = process.env.BACKEND_PORT || 3000;
+// BACKEND_PORT para no chocar con PORT, que Vite usa para el frontend en local.
+// En Render no se define BACKEND_PORT y se usa el PORT que asigna la plataforma.
+const PORT = process.env.BACKEND_PORT || process.env.PORT || 3000;
 
 app.listen(PORT, () => {
     console.log(`Servidor Backend de Evaluación Docente corriendo en http://localhost:${PORT}`);
