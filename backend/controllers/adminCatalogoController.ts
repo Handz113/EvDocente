@@ -135,6 +135,24 @@ export const toggleUsuarioActivo = async (req: AuthRequest, res: Response): Prom
   }
 
   try {
+    const checkUser = await pool.query(
+      'SELECT numero_cuenta FROM Usuario WHERE id_usuario = $1 LIMIT 1;',
+      [id]
+    );
+
+    if (checkUser.rowCount === 0) {
+      res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      return;
+    }
+
+    if (checkUser.rows[0].numero_cuenta === 'ADMIN001') {
+      res.status(403).json({
+        mensaje:
+          'Violación de seguridad: No se puede desactivar la cuenta del administrador principal del sistema.',
+      });
+      return;
+    }
+
     const { rows, rowCount } = await pool.query(
       `UPDATE Usuario
        SET activo = $1

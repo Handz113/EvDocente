@@ -46,7 +46,12 @@ VALUES
     (1, 'Bases de Datos Avanzadas', 'BDA0201', 8),
     (2, 'Diseño y Gestión de Sistemas', 'ANSI0301G', 8),
     (3, 'Probabilidad y Estadística', 'MAT0302', 6),
-    (4, 'Middleware y Sistemas Distribuidos', 'RED0401', 8);
+    (4, 'Middleware y Sistemas Distribuidos', 'RED0401', 8),
+    (5, 'Ingeniería de Software Aplicada', 'ISO0501', 8)
+ON CONFLICT (id_materia) DO UPDATE
+SET nombre = EXCLUDED.nombre,
+    clave = EXCLUDED.clave,
+    creditos = EXCLUDED.creditos;
 
 -- 5. CRN = asignación docente-materia-ciclo (el campo "crn" es el número visible)
 INSERT INTO CRN (id_crn, id_docente, id_materia, id_ciclo, crn)
@@ -54,11 +59,18 @@ VALUES
     (1, 1, 1, 1, 40211),
     (2, 1, 2, 1, 40215),
     (3, 2, 3, 1, 40230),
-    (4, 3, 4, 1, 40242);
+    (4, 3, 4, 1, 40242),
+    (9, 3, 5, 1, 40255)
+ON CONFLICT (id_crn) DO UPDATE
+SET id_docente = EXCLUDED.id_docente,
+    id_materia = EXCLUDED.id_materia,
+    id_ciclo = EXCLUDED.id_ciclo,
+    crn = EXCLUDED.crn;
 
--- 6. Inscribir al alumno de prueba en las 4 materias
+-- 6. Inscribir al alumno de prueba (ALU001, id_alumno = 1) en las 5 materias del ciclo activo (id_ciclo = 1)
 INSERT INTO Inscripcion (id_alumno, id_crn)
-VALUES (1, 1), (1, 2), (1, 3), (1, 4);
+VALUES (1, 1), (1, 2), (1, 3), (1, 4), (1, 9)
+ON CONFLICT (id_alumno, id_crn) DO NOTHING;
 
 -- 7. Las tablas usan SERIAL pero los datos se insertaron con id fijo:
 --    se ajustan las secuencias para que los siguientes INSERT no choquen.
