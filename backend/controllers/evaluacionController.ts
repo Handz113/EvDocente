@@ -1,13 +1,60 @@
 import { Request, Response } from 'express';
 import pool from '../config/db';
 
+/**
+ * GET /api/evaluaciones/preguntas
+ * Devuelve las preguntas activas del cuestionario docente desde PostgreSQL.
+ */
+export const obtenerPreguntasDocente = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    try {
+      const { rows } = await pool.query(
+        'SELECT id_pregunta, texto_pregunta, dimension FROM Pregunta ORDER BY id_pregunta ASC;'
+      );
+      res.status(200).json(
+        rows.map((r) => ({
+          id_pregunta: r.id_pregunta,
+          texto_pregunta: r.texto_pregunta,
+          dimension: r.dimension ?? 'Evaluación Docente',
+          id: r.id_pregunta,
+          texto: r.texto_pregunta,
+          categoria: r.dimension ?? 'Evaluación Docente',
+        }))
+      );
+      return;
+    } catch (dbErr: any) {
+      // Fallback para el esquema base de sql/carga_inicial.sql (id_pregunta, numero, texto, activa)
+      if (dbErr?.code === '42703') {
+        const { rows } = await pool.query(
+          'SELECT id_pregunta, texto, activa FROM Pregunta WHERE activa = TRUE ORDER BY id_pregunta ASC;'
+        );
+        res.status(200).json(
+          rows.map((r) => ({
+            id_pregunta: r.id_pregunta,
+            texto_pregunta: r.texto,
+            dimension: 'Evaluación Docente',
+            id: r.id_pregunta,
+            texto: r.texto,
+            categoria: 'Evaluación Docente',
+          }))
+        );
+        return;
+      }
+      throw dbErr;
+    }
+  } catch (error) {
+    console.error('Error al obtener las preguntas del cuestionario docente:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor al obtener las preguntas.' });
+  }
+};
+
 export const crearEvaluacion = async (req: Request, res: Response): Promise<void> => {
   const idAlumno = (req as any).user?.id || (req as any).user?.matricula;
   const { crn, calificaciones, comentarios } = req.body;
 
-  if (!crn || !calificaciones || !Array.isArray(calificaciones) || calificaciones.length !== 15) {
+  if (!crn || !calificaciones || !Array.isArray(calificaciones) || calificaciones.length === 0) {
     res.status(400).json({
-      mensaje: 'Datos inválidos. Se requiere el CRN de la clase y un arreglo exactamente con 15 calificaciones.'
+      mensaje: 'Datos inválidos. Se requiere el CRN de la clase y el arreglo de calificaciones.'
     });
     return;
   }
@@ -34,6 +81,38 @@ export const crearEvaluacion = async (req: Request, res: Response): Promise<void
 
   try {
     await client.query('BEGIN');
+
+    // 0. Consultar las preguntas actuales en la tabla Pregunta
+    let preguntasActuales: { id_pregunta: number }[] = [];
+    try {
+      const pregRes = await client.query(
+        'SELECT id_pregunta FROM Pregunta WHERE activa = TRUE ORDER BY id_pregunta ASC'
+      );
+      preguntasActuales = pregRes.rows;
+    } catch (dbErr: any) {
+      if (dbErr?.code === '42703') {
+        const pregRes = await client.query(
+          'SELECT id_pregunta FROM Pregunta ORDER BY id_pregunta ASC'
+        );
+        preguntasActuales = pregRes.rows;
+      } else {
+        throw dbErr;
+      }
+    }
+
+    if (preguntasActuales.length === 0) {
+      await client.query('ROLLBACK');
+      res.status(400).json({ mensaje: 'No hay preguntas configuradas en el cuestionario docente.' });
+      return;
+    }
+
+    if (calificaciones.length !== preguntasActuales.length) {
+      await client.query('ROLLBACK');
+      res.status(400).json({
+        mensaje: `Datos inválidos. Se requiere el CRN de la clase y un arreglo exactamente con ${preguntasActuales.length} calificaciones.`
+      });
+      return;
+    }
 
     // 1. El front manda el número de CRN visible (ej. 40211); se traduce a id_crn
     //    y se verifica que el alumno esté inscrito en ese CRN.
@@ -80,14 +159,18 @@ export const crearEvaluacion = async (req: Request, res: Response): Promise<void
     const evalResult = await client.query(insertEvalQuery, [idAlumno, idCrn, promedio, comentarioLimpio]);
     const evaluacionId = evalResult.rows[0].id_evaluacion;
 
-    // 5. Insertar respuestas usando: Respuesta, id_evaluacion, id_pregunta, valor
+    // 5. Insertar respuestas usando el id_pregunta real de la base de datos
     const insertRespuestasQuery = `
       INSERT INTO Respuesta (id_evaluacion, id_pregunta, valor)
       VALUES ($1, $2, $3)
     `;
 
     for (let i = 0; i < calificaciones.length; i++) {
-      await client.query(insertRespuestasQuery, [evaluacionId, i + 1, calificaciones[i]]);
+      await client.query(insertRespuestasQuery, [
+        evaluacionId,
+        preguntasActuales[i].id_pregunta,
+        calificaciones[i],
+      ]);
     }
 
     await client.query('COMMIT');
