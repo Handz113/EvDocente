@@ -6,9 +6,11 @@ import {
   PREGUNTAS_INSTITUCIONALES,
   ESCALA_VALORES,
   obtenerMateriasAlumnoAPI,
+  obtenerPreguntasDocenteAPI,
   enviarEvaluacionAPI,
   ErrorAPI,
   type MateriaItem,
+  type PreguntaItem,
 } from '../../services/evaluacionService'
 
 export default function Evaluacion() {
@@ -16,6 +18,7 @@ export default function Evaluacion() {
   const { usuario, cerrarSesion } = useAuth()
   const navigate = useNavigate()
 
+  const [preguntas, setPreguntas] = useState<PreguntaItem[]>([])
   const [respuestas, setRespuestas] = useState<Record<number, number>>({})
   const [comentario, setComentario] = useState('')
   const [error, setError] = useState('')
@@ -29,9 +32,17 @@ export default function Evaluacion() {
   }
 
   useEffect(() => {
+    const token = usuario?.token || ''
     // Se consulta al backend para confirmar que el alumno sí está inscrito en este CRN
-    obtenerMateriasAlumnoAPI(usuario?.token || '')
-      .then((data) => setMateria(data.materias.find((m) => m.crn === crn) ?? null))
+    // y cargar dinámicamente los reactivos desde la tabla Pregunta de PostgreSQL.
+    Promise.all([
+      obtenerMateriasAlumnoAPI(token),
+      obtenerPreguntasDocenteAPI(token).catch(() => PREGUNTAS_INSTITUCIONALES),
+    ])
+      .then(([dataMaterias, dataPreguntas]) => {
+        setMateria(dataMaterias.materias.find((m) => m.crn === crn) ?? null)
+        setPreguntas(dataPreguntas.length > 0 ? dataPreguntas : PREGUNTAS_INSTITUCIONALES)
+      })
       .catch((err) => {
         if (err instanceof ErrorAPI && err.status === 401) return sesionVencida()
         setError(err.message)
@@ -74,24 +85,25 @@ export default function Evaluacion() {
     return <Navigate to="/alumno/inicio" replace />
   }
 
-  const contestadas = Object.keys(respuestas).length
-  const completa = contestadas === PREGUNTAS_INSTITUCIONALES.length
+  const contestadas = preguntas.filter((p) => respuestas[p.id] !== undefined).length
+  const totalPreguntas = preguntas.length
+  const completa = totalPreguntas > 0 && contestadas === totalPreguntas
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault()
     if (!completa) {
-      setError(`Debes responder las ${PREGUNTAS_INSTITUCIONALES.length} preguntas institucionales antes de enviar.`)
+      setError(`Debes responder las ${totalPreguntas} preguntas institucionales antes de enviar.`)
       return
     }
 
     setEnviando(true)
     setError('')
 
-    // Convertir el mapa de respuestas al arreglo de 15 calificaciones requeridas por el endpoint
-    const arregloCalificaciones = PREGUNTAS_INSTITUCIONALES.map((p) => respuestas[p.id])
+    // Convertir el mapa de respuestas al arreglo ordenado según las preguntas reales en BD
+    const arregloCalificaciones = preguntas.map((p) => respuestas[p.id])
 
     try {
-      // POST /api/evaluaciones — el backend registra la evaluación y sus 15 respuestas
+      // POST /api/evaluaciones — el backend registra la evaluación y sus respuestas
       await enviarEvaluacionAPI(materia.crn, arregloCalificaciones, usuario?.token || '', comentario)
       navigate('/alumno/listo', { state: { materia: materia.nombre } })
     } catch (err) {
@@ -120,18 +132,18 @@ export default function Evaluacion() {
         </div>
 
         <div className="flex justify-between items-center text-xs text-[#5d6678] font-medium mb-1.5">
-          <span>{contestadas} de {PREGUNTAS_INSTITUCIONALES.length} preguntas respondidas</span>
-          <span>{Math.round((contestadas / PREGUNTAS_INSTITUCIONALES.length) * 100)}%</span>
+          <span>{contestadas} de {totalPreguntas} preguntas respondidas</span>
+          <span>{totalPreguntas > 0 ? Math.round((contestadas / totalPreguntas) * 100) : 0}%</span>
         </div>
         <div className="h-2 w-full bg-[#e2e6ef] rounded-full overflow-hidden mb-6">
           <div
             className="h-full bg-[#2557d6] rounded-full transition-all duration-300"
-            style={{ width: `${(contestadas / PREGUNTAS_INSTITUCIONALES.length) * 100}%` }}
+            style={{ width: `${totalPreguntas > 0 ? (contestadas / totalPreguntas) * 100 : 0}%` }}
           />
         </div>
 
         <div className="space-y-4 mb-6">
-          {PREGUNTAS_INSTITUCIONALES.map((p, index) => (
+          {preguntas.map((p, index) => (
             <div
               key={p.id}
               className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs"
