@@ -24,7 +24,8 @@ export const enviarCorreoRecuperacion = async (
   destinatario: string,
   token: string,
 ): Promise<void> => {
-  const resetUrl = `http://localhost:8443/reset-password?token=${token}`
+  const baseUrl = (process.env.FRONTEND_URL || "http://localhost:8443").replace(/\/+$/, "")
+  const resetUrl = `${baseUrl}/reset-password?token=${token}`
 
   await transporter.sendMail({
     from:
