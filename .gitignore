@@ -26,8 +26,7 @@ logs/
 vite.config.*.timestamp-*
 *.tsbuildinfo
 
-# Herramientas de Figma y Agentes locales
-/.figma/design-context/
+# Herramientas y temporales locales
 /.plugins/
 /.opencode-skills/
 .claude-replay.*
