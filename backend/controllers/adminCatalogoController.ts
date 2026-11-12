@@ -206,6 +206,8 @@ export const listarDocentesAdmin = async (_req: AuthRequest, res: Response): Pro
   }
 };
 
+export const obtenerDocentesAdmin = listarDocentesAdmin;
+
 /**
  * POST /api/admin/docentes
  * Recibe datos, verifica si el usuario existe o lo crea, y luego hace INSERT INTO Docente.
@@ -346,6 +348,59 @@ export const crearDocente = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+/**
+ * DELETE /api/admin/docentes/:id
+ * Si el docente ya tiene CRNs o evaluaciones asociadas (error de llave foránea 23503),
+ * desactiva su cuenta en Usuario (baja lógica) y responde HTTP 200;
+ * si no tiene dependencias, realiza el borrado físico.
+ */
+export const eliminarDocente = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ mensaje: 'El id del docente no es válido.' });
+    return;
+  }
+
+  try {
+    const existe = await pool.query(
+      'SELECT id_docente, id_usuario FROM Docente WHERE id_docente = $1 LIMIT 1;',
+      [id]
+    );
+
+    if (existe.rowCount === 0) {
+      res.status(404).json({ mensaje: 'Docente no encontrado.' });
+      return;
+    }
+
+    try {
+      await pool.query('DELETE FROM Docente WHERE id_docente = $1;', [id]);
+      res.status(200).json({
+        mensaje: 'Docente eliminado correctamente.',
+        bajaLogica: false,
+      });
+      return;
+    } catch (deleteErr: any) {
+      if (deleteErr?.code === '23503') {
+        await pool.query(
+          'UPDATE Usuario SET activo = FALSE WHERE id_usuario = (SELECT id_usuario FROM Docente WHERE id_docente = $1);',
+          [id]
+        );
+        res.status(200).json({
+          mensaje:
+            'El docente cuenta con CRNs o evaluaciones asociadas; se realizó la baja lógica desactivando su usuario.',
+          bajaLogica: true,
+        });
+        return;
+      }
+      throw deleteErr;
+    }
+  } catch (error) {
+    console.error('Error al eliminar docente:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor al eliminar el docente.' });
+  }
+};
+
 // ============================================================================
 // 3. CATÁLOGO DE MATERIAS Y CRN (Materia, CRN, CicloEscolar)
 // ============================================================================
@@ -385,6 +440,8 @@ export const listarMateriasCRN = async (_req: AuthRequest, res: Response): Promi
     res.status(500).json({ mensaje: 'Error interno del servidor al listar materias y CRN.' });
   }
 };
+
+export const obtenerMateriasCRN = listarMateriasCRN;
 
 /**
  * POST /api/admin/materias
@@ -455,6 +512,63 @@ export const crearMateria = async (req: AuthRequest, res: Response): Promise<voi
     }
     console.error('Error al crear materia:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor al crear la materia.' });
+  }
+};
+
+/**
+ * DELETE /api/admin/materias/:id
+ * Permite eliminar el registro en CRN o Materia manejando errores de llave foránea (23503)
+ * con HTTP 409 si ya cuenta con inscripciones o evaluaciones.
+ */
+export const eliminarMateriaCRN = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ mensaje: 'El identificador proporcionado no es válido.' });
+    return;
+  }
+
+  try {
+    // 1. Buscar si el identificador corresponde a un registro en CRN (por id_crn o número de crn)
+    const crnCheck = await pool.query(
+      'SELECT id_crn, id_materia FROM CRN WHERE id_crn = $1 OR crn = $1 LIMIT 1;',
+      [id]
+    );
+
+    if (crnCheck.rowCount && crnCheck.rowCount > 0) {
+      const { id_crn, id_materia } = crnCheck.rows[0];
+      await pool.query('DELETE FROM CRN WHERE id_crn = $1;', [id_crn]);
+
+      // Si la materia ya no tiene ningún otro CRN asociado, intentar eliminar también la Materia
+      const otrosCrn = await pool.query('SELECT 1 FROM CRN WHERE id_materia = $1 LIMIT 1;', [
+        id_materia,
+      ]);
+      if (otrosCrn.rowCount === 0) {
+        await pool.query('DELETE FROM Materia WHERE id_materia = $1;', [id_materia]);
+      }
+
+      res.status(200).json({ mensaje: 'Materia / CRN eliminado correctamente.' });
+      return;
+    }
+
+    // 2. Si no era un CRN, intentar eliminar directamente de la tabla Materia por id_materia
+    const materiaDel = await pool.query('DELETE FROM Materia WHERE id_materia = $1;', [id]);
+    if (materiaDel.rowCount === 0) {
+      res.status(404).json({ mensaje: 'Materia o CRN no encontrado.' });
+      return;
+    }
+
+    res.status(200).json({ mensaje: 'Materia eliminada correctamente.' });
+  } catch (error: any) {
+    if (error?.code === '23503') {
+      res.status(409).json({
+        mensaje:
+          'No se puede eliminar la materia o CRN porque ya cuenta con inscripciones o evaluaciones registradas.',
+      });
+      return;
+    }
+    console.error('Error al eliminar materia o CRN:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor al eliminar la materia o CRN.' });
   }
 };
 

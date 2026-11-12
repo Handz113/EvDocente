@@ -3,10 +3,12 @@ import {
   listarUsuarios,
   crearUsuario,
   toggleUsuarioActivo,
-  listarDocentesAdmin,
+  obtenerDocentesAdmin,
   crearDocente,
-  listarMateriasCRN,
+  eliminarDocente,
+  obtenerMateriasCRN,
   crearMateria,
+  eliminarMateriaCRN,
   listarPreguntas,
   crearPregunta,
   eliminarPregunta,
@@ -26,14 +28,17 @@ router.patch('/usuarios/:id/activo', ...soloAdmin, toggleUsuarioActivo);
 router.patch('/usuarios/:id', ...soloAdmin, toggleUsuarioActivo);
 
 // 2. Catálogo de Docentes
-router.get('/docentes', ...soloAdmin, listarDocentesAdmin);
+router.get('/docentes', ...soloAdmin, obtenerDocentesAdmin);
 router.post('/docentes', ...soloAdmin, crearDocente);
+router.delete('/docentes/:id', ...soloAdmin, eliminarDocente);
 
 // 3. Catálogo de Materias y CRN
-router.get('/materias', ...soloAdmin, listarMateriasCRN);
+router.get('/materias', ...soloAdmin, obtenerMateriasCRN);
 router.post('/materias', ...soloAdmin, crearMateria);
-router.get('/materias-crn', ...soloAdmin, listarMateriasCRN);
+router.delete('/materias/:id', ...soloAdmin, eliminarMateriaCRN);
+router.get('/materias-crn', ...soloAdmin, obtenerMateriasCRN);
 router.post('/materias-crn', ...soloAdmin, crearMateria);
+router.delete('/materias-crn/:id', ...soloAdmin, eliminarMateriaCRN);
 
 // 4. Catálogo de Preguntas Docentes
 router.get('/preguntas', ...soloAdmin, listarPreguntas);
