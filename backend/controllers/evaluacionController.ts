@@ -254,11 +254,13 @@ export const obtenerPromedioDocente = async (req: Request, res: Response): Promi
     const queryParams: any[] = [idDocenteReal];
 
     if (filtroPeriodo) {
-      queryParams.push(filtroPeriodo);
       if (!isNaN(Number(filtroPeriodo))) {
+        queryParams.push(filtroPeriodo);
         evaluacionQuery += ` AND (c.id_ciclo = $2 OR ce.nombre = $2::text)`;
       } else {
-        evaluacionQuery += ` AND (LOWER(ce.nombre) = LOWER($2::text) OR LOWER(ce.nombre) LIKE LOWER('%' || $2::text || '%'))`;
+        const periodoEscapado = String(filtroPeriodo).replace(/[%_\\]/g, '\\$&');
+        queryParams.push(periodoEscapado);
+        evaluacionQuery += ` AND (LOWER(ce.nombre) = LOWER($2::text) OR LOWER(ce.nombre) LIKE LOWER('%' || $2::text || '%') ESCAPE '\\')`;
       }
     }
 

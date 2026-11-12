@@ -122,12 +122,19 @@ export const solicitarRecuperacion = async (req: Request, res: Response): Promis
 
   const correoLimpio = correo.trim().toLowerCase();
 
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error('JWT_SECRET no está definido en las variables de entorno.');
+    res.status(500).json({ mensaje: 'Error interno del servidor.' });
+    return;
+  }
+
   try {
     let user: any = null;
 
     try {
       const result = await pool.query(
-        'SELECT id_usuario, correo_institucional FROM Usuario WHERE LOWER(correo_institucional) = $1 LIMIT 1',
+        'SELECT id_usuario, correo_institucional, contrasena FROM Usuario WHERE LOWER(correo_institucional) = $1 LIMIT 1',
         [correoLimpio]
       );
       user = result.rows[0];
@@ -135,7 +142,7 @@ export const solicitarRecuperacion = async (req: Request, res: Response): Promis
       // Fallback si la columna se llama correo en lugar de correo_institucional
       if (dbErr?.message && dbErr.message.includes('correo_institucional')) {
         const result = await pool.query(
-          'SELECT id_usuario, correo FROM Usuario WHERE LOWER(correo) = $1 LIMIT 1',
+          'SELECT id_usuario, correo, contrasena FROM Usuario WHERE LOWER(correo) = $1 LIMIT 1',
           [correoLimpio]
         );
         user = result.rows[0];
@@ -145,25 +152,27 @@ export const solicitarRecuperacion = async (req: Request, res: Response): Promis
     }
 
     if (!user) {
-      res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      res.status(200).json({
+        mensaje: 'Si el correo está registrado, recibirás un enlace de recuperación.',
+      });
       return;
     }
 
-    const secret = process.env.JWT_SECRET || 'secret';
+    const resetSecret = secret + user.contrasena;
     const token = jwt.sign(
       {
         id_usuario: user.id_usuario,
         correo: user.correo_institucional || user.correo || correoLimpio,
         accion: 'recuperar-password',
       },
-      secret,
-      { expiresIn: '15m' }
+      resetSecret,
+      { expiresIn: '15m', algorithm: 'HS256' }
     );
 
     await enviarCorreoRecuperacion(correoLimpio, token);
 
     res.status(200).json({
-      mensaje: 'Se ha enviado un enlace de recuperación a tu correo electrónico.',
+      mensaje: 'Si el correo está registrado, recibirás un enlace de recuperación.',
     });
   } catch (error) {
     console.error('Error en solicitarRecuperacion:', error);
@@ -176,7 +185,7 @@ export const solicitarRecuperacion = async (req: Request, res: Response): Promis
 /**
  * POST /api/auth/reset-password
  * Body: { token, nuevaContrasena }
- * Valida el token JWT de recuperación, cifra la nueva contraseña con bcrypt
+ * Valida el token JWT de recuperación (de un solo uso y alcance aislado), cifra la nueva contraseña con bcrypt
  * y actualiza el registro del usuario en la base de datos PostgreSQL.
  */
 export const restablecerPassword = async (req: Request, res: Response): Promise<void> => {
@@ -194,12 +203,37 @@ export const restablecerPassword = async (req: Request, res: Response): Promise<
     return;
   }
 
-  const secret = process.env.JWT_SECRET || 'secret';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error('JWT_SECRET no está definido en las variables de entorno.');
+    res.status(500).json({ mensaje: 'Error interno del servidor.' });
+    return;
+  }
 
   try {
+    const preDecoded = jwt.decode(token) as { id_usuario?: number; accion?: string } | null;
+    if (!preDecoded || !preDecoded.id_usuario || preDecoded.accion !== 'recuperar-password') {
+      res.status(401).json({
+        mensaje: 'El enlace de recuperación es inválido o está corrupto.',
+      });
+      return;
+    }
+
+    const userResult = await pool.query(
+      'SELECT id_usuario, contrasena FROM Usuario WHERE id_usuario = $1 LIMIT 1',
+      [preDecoded.id_usuario]
+    );
+    const user = userResult.rows[0];
+
+    if (!user) {
+      res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      return;
+    }
+
+    const resetSecret = secret + user.contrasena;
     let decoded: any;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(token, resetSecret, { algorithms: ['HS256'] });
     } catch (jwtErr: any) {
       if (jwtErr?.name === 'TokenExpiredError') {
         res.status(401).json({
@@ -208,12 +242,12 @@ export const restablecerPassword = async (req: Request, res: Response): Promise<
         return;
       }
       res.status(401).json({
-        mensaje: 'El enlace de recuperación es inválido o está corrupto.',
+        mensaje: 'El enlace de recuperación es inválido, está corrupto o ya fue utilizado.',
       });
       return;
     }
 
-    if (!decoded || !decoded.id_usuario) {
+    if (!decoded || !decoded.id_usuario || decoded.accion !== 'recuperar-password') {
       res.status(400).json({ mensaje: 'Token de recuperación no válido para este usuario.' });
       return;
     }

@@ -8,9 +8,13 @@ const payload = {
 };
 
 // Usa la misma clave secreta de tu archivo .env
-const secret = process.env.JWT_SECRET || 'super_secreto_para_firmar_tokens_123';
+const secret = process.env.JWT_SECRET;
+if (!secret) {
+    console.error('Error crítico: JWT_SECRET no está definido en el archivo .env.');
+    process.exit(1);
+}
 
-const token = jwt.sign(payload, secret, { expiresIn: '2h' });
+const token = jwt.sign(payload, secret, { expiresIn: '2h', algorithm: 'HS256' });
 console.log('\n=== TU TOKEN DE PRUEBA ===\n');
 console.log(token);
 console.log('\n==========================\n');

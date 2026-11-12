@@ -16,11 +16,6 @@ export const listarDocentes = async (req: AuthRequest, res: Response): Promise<v
     const idCiclo =
       idCicloRaw && !isNaN(Number(idCicloRaw)) && Number(idCicloRaw) > 0 ? Number(idCicloRaw) : null;
 
-    const filtroCiclo = idCiclo
-      ? 'AND c.id_ciclo = $1'
-      : 'AND c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE)';
-    const queryParams: any[] = idCiclo ? [idCiclo] : [];
-
     const { rows } = await pool.query(
       `SELECT d.id_docente, d.nombre, d.apellido, d.departamento, u.correo_institucional,
               COALESCE(
@@ -31,11 +26,11 @@ export const listarDocentes = async (req: AuthRequest, res: Response): Promise<v
        FROM Docente d
        INNER JOIN Usuario u ON u.id_usuario = d.id_usuario
        LEFT JOIN CRN c ON c.id_docente = d.id_docente
-         ${filtroCiclo}
+         AND ($1::int IS NOT NULL AND c.id_ciclo = $1 OR $1::int IS NULL AND c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE))
        LEFT JOIN Materia m ON m.id_materia = c.id_materia
        GROUP BY d.id_docente, u.correo_institucional
        ORDER BY d.apellido, d.nombre`,
-      queryParams
+      [idCiclo]
     );
 
     res.json(
@@ -69,10 +64,7 @@ export const obtenerResultadosDocente = async (
       ? Number(idCicloParam)
       : null;
 
-  const filtroCiclo = idCiclo
-    ? 'c.id_ciclo = $2'
-    : 'c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE)';
-  const queryParams: any[] = idCiclo ? [idDocente, idCiclo] : [idDocente];
+  const queryParams: any[] = [idDocente, idCiclo];
 
   const grupos = await pool.query(
     `SELECT c.id_crn, c.crn, m.clave, m.nombre, COUNT(e.id_evaluacion)::int AS total,
@@ -81,7 +73,8 @@ export const obtenerResultadosDocente = async (
      INNER JOIN Materia m ON m.id_materia = c.id_materia
      INNER JOIN CicloEscolar ce ON ce.id_ciclo = c.id_ciclo
      LEFT JOIN Evaluacion e ON e.id_crn = c.id_crn
-     WHERE c.id_docente = $1 AND ${filtroCiclo}
+     WHERE c.id_docente = $1
+       AND ($2::int IS NOT NULL AND c.id_ciclo = $2 OR $2::int IS NULL AND c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE))
      GROUP BY c.id_crn, m.clave, m.nombre
      ORDER BY m.nombre`,
     queryParams
@@ -93,7 +86,8 @@ export const obtenerResultadosDocente = async (
      INNER JOIN Evaluacion e ON e.id_evaluacion = r.id_evaluacion
      INNER JOIN Pregunta p ON p.id_pregunta = r.id_pregunta
      INNER JOIN CRN c ON c.id_crn = e.id_crn
-     WHERE c.id_docente = $1 AND ${filtroCiclo}
+     WHERE c.id_docente = $1
+       AND ($2::int IS NOT NULL AND c.id_ciclo = $2 OR $2::int IS NULL AND c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE))
      GROUP BY e.id_crn, p.id_pregunta, p.texto
      ORDER BY p.id_pregunta`,
     queryParams
@@ -104,7 +98,9 @@ export const obtenerResultadosDocente = async (
     `SELECT e.id_crn, e.comentarios
      FROM Evaluacion e
      INNER JOIN CRN c ON c.id_crn = e.id_crn
-     WHERE c.id_docente = $1 AND ${filtroCiclo} AND e.comentarios IS NOT NULL AND TRIM(e.comentarios) <> ''
+     WHERE c.id_docente = $1
+       AND ($2::int IS NOT NULL AND c.id_ciclo = $2 OR $2::int IS NULL AND c.id_ciclo IN (SELECT id_ciclo FROM CicloEscolar WHERE activo = TRUE))
+       AND e.comentarios IS NOT NULL AND TRIM(e.comentarios) <> ''
      ORDER BY random()`,
     queryParams
   );
