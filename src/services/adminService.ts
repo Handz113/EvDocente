@@ -203,6 +203,20 @@ export function crearDocenteAPI(
   );
 }
 
+/** DELETE /api/admin/docentes/:id */
+export function eliminarDocenteAPI(
+  id: number | string,
+  token: string
+): Promise<{ mensaje: string; bajaLogica?: boolean }> {
+  return fetchAdmin<{ mensaje: string; bajaLogica?: boolean }>(
+    `/admin/docentes/${id}`,
+    {
+      method: 'DELETE',
+    },
+    token
+  );
+}
+
 // ==========================================================
 // 3. SERVICIOS DE MATERIAS Y CRN
 // ==========================================================
@@ -224,6 +238,20 @@ export function crearMateriaAPI(
     {
       method: 'POST',
       body: JSON.stringify(datos),
+    },
+    token
+  );
+}
+
+/** DELETE /api/admin/materias/:id */
+export function eliminarMateriaAPI(
+  id: number | string,
+  token: string
+): Promise<{ mensaje: string }> {
+  return fetchAdmin<{ mensaje: string }>(
+    `/admin/materias/${id}`,
+    {
+      method: 'DELETE',
     },
     token
   );
