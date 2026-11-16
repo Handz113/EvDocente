@@ -135,7 +135,49 @@ export default function PanelDocente() {
   const [crn, setCrn] = useState<string>('')
   const [desempenoAPI, setDesempenoAPI] = useState<ClasificacionDocenteAPI | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [descargandoPDF, setDescargandoPDF] = useState(false)
   const [error, setError] = useState('')
+
+  const exportarReportePDF = async () => {
+    const token = usuario?.token || ''
+    if (!token || descargandoPDF) return
+
+    setDescargandoPDF(true)
+    setError('')
+    try {
+      const response = await fetch('/api/reportes/docente/me/pdf', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.status === 401) {
+        cerrarSesion()
+        navigate('/personal/docente/login', { replace: true })
+        return
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.mensaje || 'No se pudo generar el reporte en PDF.')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const enlace = document.createElement('a')
+      enlace.href = url
+      enlace.download = 'reporte-evaluacion.pdf'
+      document.body.appendChild(enlace)
+      enlace.click()
+      enlace.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setError(err?.message || 'Error al descargar el reporte en PDF.')
+    } finally {
+      setDescargandoPDF(false)
+    }
+  }
 
   // 1. Carga inicial del catálogo de ciclos escolares
   useEffect(() => {
@@ -259,25 +301,36 @@ export default function PanelDocente() {
           </p>
         </div>
 
-        {ciclos.length > 0 && (
-          <div className="flex items-center gap-2">
-            <label htmlFor="selector-ciclo" className="text-xs font-semibold text-[#5d6678] whitespace-nowrap">
-              Periodo escolar:
-            </label>
-            <select
-              id="selector-ciclo"
-              value={cicloSeleccionado}
-              onChange={(e) => setCicloSeleccionado(e.target.value)}
-              className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] focus:outline-none shadow-xs cursor-pointer"
-            >
-              {ciclos.map((c) => (
-                <option key={c.id_ciclo} value={String(c.id_ciclo)}>
-                  {c.nombre} {c.activo ? '(Activo)' : '(Histórico)'}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {ciclos.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label htmlFor="selector-ciclo" className="text-xs font-semibold text-[#5d6678] whitespace-nowrap">
+                Periodo escolar:
+              </label>
+              <select
+                id="selector-ciclo"
+                value={cicloSeleccionado}
+                onChange={(e) => setCicloSeleccionado(e.target.value)}
+                className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] focus:outline-none shadow-xs cursor-pointer"
+              >
+                {ciclos.map((c) => (
+                  <option key={c.id_ciclo} value={String(c.id_ciclo)}>
+                    {c.nombre} {c.activo ? '(Activo)' : '(Histórico)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={exportarReportePDF}
+            disabled={descargandoPDF}
+            className="px-3.5 py-2 rounded-xl border border-[#0f766e] bg-white text-[#0f766e] hover:bg-[#e3f4f2] text-xs font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {descargandoPDF ? 'Exportando PDF...' : 'Exportar a PDF'}
+          </button>
+        </div>
       </div>
 
       {error && (

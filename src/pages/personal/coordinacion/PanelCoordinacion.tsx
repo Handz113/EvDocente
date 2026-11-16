@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   ResponsiveContainer,
   BarChart,
@@ -121,11 +121,97 @@ export default function PanelCoordinacion() {
   const [modoGrafico, setModoGrafico] = useState<'area' | 'materia'>('area')
   const [areaGrafico, setAreaGrafico] = useState<string>('todas')
   const [materiaGrafico, setMateriaGrafico] = useState<string>('')
+  const [isExporting, setIsExporting] = useState(false)
+  const [menuExportarAbierto, setMenuExportarAbierto] = useState(false)
+  const menuExportarRef = useRef<HTMLDivElement | null>(null)
 
   const sesionVencida = () => {
     cerrarSesion()
     navigate('/personal/coordinacion/login', { replace: true })
   }
+
+  useEffect(() => {
+    if (!menuExportarAbierto) return
+    const cerrarAlClickFuera = (e: MouseEvent) => {
+      if (menuExportarRef.current && !menuExportarRef.current.contains(e.target as Node)) {
+        setMenuExportarAbierto(false)
+      }
+    }
+    document.addEventListener('mousedown', cerrarAlClickFuera)
+    return () => document.removeEventListener('mousedown', cerrarAlClickFuera)
+  }, [menuExportarAbierto])
+
+  const construirQueryExportacion = () => {
+    let filtroTipo: 'general' | 'area' | 'materia' = 'general'
+    let filtroValor = ''
+
+    if (modoGrafico === 'materia' && materiaGrafico) {
+      filtroTipo = 'materia'
+      filtroValor = materiaGrafico
+    } else if (area !== 'todas') {
+      filtroTipo = 'area'
+      filtroValor = area
+    } else if (modoGrafico === 'area' && areaGrafico !== 'todas') {
+      filtroTipo = 'area'
+      filtroValor = areaGrafico
+    }
+
+    const params = new URLSearchParams()
+    if (cicloSeleccionado) params.set('id_ciclo', cicloSeleccionado)
+    params.set('filtro_tipo', filtroTipo)
+    if (filtroValor) params.set('filtro_valor', filtroValor)
+    return params.toString()
+  }
+
+  const ejecutarDescarga = async (
+    formato: 'pdf' | 'excel' | 'csv',
+    nombreArchivo: string
+  ) => {
+    const token = usuario?.token || ''
+    if (!token || isExporting) return
+
+    setMenuExportarAbierto(false)
+    setIsExporting(true)
+    setError('')
+
+    try {
+      const query = construirQueryExportacion()
+      const response = await fetch(`/api/reportes/coordinacion/${formato}?${query}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.status === 401) {
+        sesionVencida()
+        return
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.mensaje || `No se pudo generar el reporte en formato ${formato.toUpperCase()}.`)
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const enlace = document.createElement('a')
+      enlace.href = url
+      enlace.download = nombreArchivo
+      document.body.appendChild(enlace)
+      enlace.click()
+      enlace.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      setError(err?.message || 'Error al exportar el reporte.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const descargarReportePDF = () => ejecutarDescarga('pdf', 'reporte-directivo-coordinacion.pdf')
+  const descargarExcel = () => ejecutarDescarga('excel', 'reporte.xlsx')
+  const descargarCSV = () => ejecutarDescarga('csv', 'reporte.csv')
 
   useEffect(() => {
     if (!seleccionId) return
@@ -429,10 +515,89 @@ export default function PanelCoordinacion() {
   return (
     <Layout titulo="Coordinación" tono="personal">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Panel de Coordinación Académica</h1>
-        <p className="text-sm text-[#5d6678]">
-          Monitoreo de desempeño para asignación docente (ciclos activos e históricos).
-        </p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Panel de Coordinación Académica</h1>
+            <p className="text-sm text-[#5d6678]">
+              Monitoreo de desempeño para asignación docente (ciclos activos e históricos).
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {ciclos.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="selector-ciclo-coordinacion"
+                  className="text-xs font-semibold text-[#5d6678] whitespace-nowrap"
+                >
+                  Ciclo escolar:
+                </label>
+                <select
+                  id="selector-ciclo-coordinacion"
+                  value={cicloSeleccionado}
+                  onChange={(e) => setCicloSeleccionado(e.target.value)}
+                  className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] focus:outline-none shadow-xs cursor-pointer"
+                >
+                  {ciclos.map((c) => (
+                    <option key={c.id_ciclo} value={String(c.id_ciclo)}>
+                      {c.nombre} {c.activo ? '(Activo)' : '(Histórico)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="relative" ref={menuExportarRef}>
+              <button
+                type="button"
+                onClick={() => setMenuExportarAbierto((prev) => !prev)}
+                disabled={isExporting}
+                aria-haspopup="menu"
+                aria-expanded={menuExportarAbierto}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0d9488] text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                <span>{isExporting ? 'Generando...' : 'Exportar Reporte'}</span>
+                <span className="text-[10px] leading-none">{menuExportarAbierto ? '▲' : '▼'}</span>
+              </button>
+
+              {menuExportarAbierto && !isExporting && (
+                <div
+                  role="menu"
+                  aria-label="Opciones de exportación de reporte"
+                  className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-[#e2e6ef] shadow-lg py-1.5 z-40"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={descargarReportePDF}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] hover:bg-[#e3f4f2] hover:text-[#0f766e] transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <span>📄</span>
+                    <span>Exportar a PDF (Resumen Ejecutivo)</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={descargarExcel}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] hover:bg-[#e3f4f2] hover:text-[#0f766e] transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <span>📊</span>
+                    <span>Exportar a Excel (Datos Completos)</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={descargarCSV}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] hover:bg-[#e3f4f2] hover:text-[#0f766e] transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <span>📝</span>
+                    <span>Exportar a CSV (Texto Plano)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
         {error && (
           <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mt-4">{error}</p>
         )}
