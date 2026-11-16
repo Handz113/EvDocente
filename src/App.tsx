@@ -18,10 +18,18 @@ import PanelDocente from './pages/personal/docente/PanelDocente'
 import PanelCoordinacion from './pages/personal/coordinacion/PanelCoordinacion'
 import PanelAdministracion from './pages/personal/administracion/PanelAdministracion'
 
+// Recuperación de contraseñas
+import RecuperarPassword from './pages/RecuperarPassword'
+import ResetPassword from './pages/ResetPassword'
+
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Bienvenida />} />
+
+      {/* ---------- RECUPERACIÓN DE CONTRASEÑA (PÚBLICAS) ---------- */}
+      <Route path="/recuperar-password" element={<RecuperarPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* ---------- ALUMNOS ---------- */}
       <Route path="/alumno" element={<LoginAlumno />} />

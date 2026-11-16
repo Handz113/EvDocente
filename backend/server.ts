@@ -10,11 +10,19 @@ import docenteRoutes from './routes/docenteRoutes';
 import cicloRoutes from './routes/cicloRoutes';
 import participacionRoutes from './routes/participacionRoutes';
 import instalacionRoutes from './routes/instalacionRoutes';
+import adminRoutes from './routes/adminRoutes';
+import reporteRoutes from './routes/reporteRoutes';
+
+if (!process.env.JWT_SECRET) {
+  console.error('Error crítico de seguridad: JWT_SECRET no está definido en las variables de entorno.');
+  process.exit(1);
+}
 
 const app = express();
+app.disable('x-powered-by');
 
-// Middleware para poder recibir JSON en el body de las peticiones
-app.use(express.json());
+// Middleware para poder recibir JSON en el body de las peticiones (acotado a 16kb)
+app.use(express.json({ limit: '16kb' }));
 
 // =========================
 // RUTAS DE LA API
@@ -28,7 +36,8 @@ app.get('/api/salud', async (_req, res) => {
     await pool.query('SELECT 1');
     res.json({ servidor: 'ok', baseDeDatos: 'ok' });
   } catch (error) {
-    res.status(503).json({ servidor: 'ok', baseDeDatos: 'sin conexión', detalle: (error as Error).message });
+    console.error(error);
+    res.status(503).json({ servidor: 'ok', baseDeDatos: 'sin conexión' });
   }
 });
 
@@ -40,6 +49,8 @@ app.use('/api/evaluaciones', evaluacionRoutes);
 app.use('/api/ciclos', cicloRoutes);
 app.use('/api/participacion', participacionRoutes);
 app.use('/api/instalaciones', instalacionRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/reportes', reporteRoutes);
 
 // =========================
 // FRONTEND COMPILADO (producción)

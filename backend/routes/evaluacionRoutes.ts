@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { 
+  obtenerPreguntasDocente,
   crearEvaluacion, 
   obtenerPromedioDocente, 
   calcularDesempenoDocente 
@@ -7,6 +8,18 @@ import {
 import { verificarToken, verificarRol, type AuthRequest } from '../middlewares/auth';
 
 const router = Router();
+
+/**
+ * GET /api/evaluaciones/preguntas
+ * Obtiene el catálogo dinámico de preguntas para la evaluación docente.
+ * Accesible para Alumno, Docente, Coordinador y Administrador.
+ */
+router.get(
+  '/preguntas',
+  verificarToken,
+  verificarRol(['Alumno', 'Docente', 'Coordinador', 'Administrador']),
+  obtenerPreguntasDocente
+);
 
 /**
  * POST /api/evaluaciones

@@ -1,18 +1,31 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type FormEvent, type ReactNode } from 'react'
 import Layout from '../../../components/Layout'
 import ParticipacionAlumnos from '../../../components/ParticipacionAlumnos'
 import GestionInstalaciones from '../../../components/GestionInstalaciones'
 import ResultadosInstalaciones from '../../../components/ResultadosInstalaciones'
+import { useAuth } from '../../../context/AuthContext'
 import {
-  DOCENTES_CATALOGO,
-  MATERIAS_CATALOGO,
-  PREGUNTAS_INSTITUCIONALES,
-  PERIODO_ACTUAL,
-  type DocenteResumen,
-  type MateriaItem,
-  type PreguntaItem,
-  type PeriodoItem,
-} from '../../../services/evaluacionService'
+  obtenerUsuariosAPI,
+  crearUsuarioAPI,
+  toggleUsuarioAPI,
+  obtenerDocentesAPI,
+  crearDocenteAPI,
+  eliminarDocenteAPI,
+  obtenerMateriasAPI,
+  crearMateriaAPI,
+  eliminarMateriaAPI,
+  obtenerPreguntasAPI,
+  crearPreguntaAPI,
+  eliminarPreguntaAPI,
+  obtenerCiclosAPI,
+  crearCicloAPI,
+  toggleCicloAPI,
+  type UsuarioAdmin,
+  type DocenteAdmin,
+  type MateriaAdmin,
+  type PreguntaAdmin,
+  type PeriodoAdmin,
+} from '../../../services/adminService'
 
 const pestañas = [
   { id: 'usuarios', nombre: 'Usuarios' },
@@ -24,29 +37,258 @@ const pestañas = [
   { id: 'instalaciones', nombre: 'Talleres y Labs' },
 ]
 
-interface UsuarioPersonal {
-  usuario: string
-  nombre: string
-  area: string
-  activo: boolean
+interface UsuarioFila extends UsuarioAdmin {
+  contrasena?: string
+}
+
+interface MateriaFila extends MateriaAdmin {
+  clave_unica: string
 }
 
 export default function PanelAdministracion() {
+  const { usuario } = useAuth()
+  const token = usuario?.token || ''
+
   const [activa, setActiva] = useState('usuarios')
+  const [errorApi, setErrorApi] = useState('')
+  const [mensajeInfo, setMensajeInfo] = useState('')
 
-  const [usuarios, setUsuarios] = useState<UsuarioPersonal[]>([
-    { usuario: 'DOC001', nombre: 'Juan Pérez', area: 'Docente', activo: true },
-    { usuario: 'COORD001', nombre: 'Coordinación Sistemas', area: 'Coordinación', activo: true },
-    { usuario: 'ADMIN001', nombre: 'Administrador del Sistema', area: 'Administración', activo: true },
-  ])
+  const [usuarios, setUsuarios] = useState<UsuarioFila[]>([])
+  const [listaDocentes, setListaDocentes] = useState<DocenteAdmin[]>([])
+  const [listaMaterias, setListaMaterias] = useState<MateriaFila[]>([])
+  const [listaPreguntas, setListaPreguntas] = useState<PreguntaAdmin[]>([])
+  const [periodos, setPeriodos] = useState<PeriodoAdmin[]>([])
 
-  const [listaDocentes, setListaDocentes] = useState<DocenteResumen[]>(DOCENTES_CATALOGO)
-  const [listaMaterias, setListaMaterias] = useState<MateriaItem[]>(MATERIAS_CATALOGO)
-  const [listaPreguntas, setListaPreguntas] = useState<PreguntaItem[]>(PREGUNTAS_INSTITUCIONALES)
-  const [periodos, setPeriodos] = useState<PeriodoItem[]>([
-    PERIODO_ACTUAL,
-    { id: '2', nombre: 'Ciclo 2026-1', inicio: '2026-02-01', fin: '2026-06-30', activo: false },
-  ])
+  const cargarUsuarios = useCallback(async () => {
+    if (!token) return
+    try {
+      const data = await obtenerUsuariosAPI(token)
+      setUsuarios(data)
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }, [token])
+
+  const cargarDocentes = useCallback(async () => {
+    if (!token) return
+    try {
+      const data = await obtenerDocentesAPI(token)
+      setListaDocentes(data)
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }, [token])
+
+  const cargarMaterias = useCallback(async () => {
+    if (!token) return
+    try {
+      const data = await obtenerMateriasAPI(token)
+      setListaMaterias(
+        data.map((m) => ({
+          ...m,
+          clave_unica: m.id_crn ? `crn-${m.id_crn}` : `mat-${m.id_materia}`,
+        }))
+      )
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }, [token])
+
+  const cargarPreguntas = useCallback(async () => {
+    if (!token) return
+    try {
+      const data = await obtenerPreguntasAPI(token)
+      setListaPreguntas(data)
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }, [token])
+
+  const cargarPeriodos = useCallback(async () => {
+    if (!token) return
+    try {
+      const data = await obtenerCiclosAPI(token)
+      setPeriodos(
+        data.map((p) => ({
+          ...p,
+          fecha_inicio_eval: p.fecha_inicio_eval ? String(p.fecha_inicio_eval).slice(0, 10) : '',
+          fecha_cierre_eval: p.fecha_cierre_eval ? String(p.fecha_cierre_eval).slice(0, 10) : '',
+        }))
+      )
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }, [token])
+
+  useEffect(() => {
+    cargarUsuarios()
+    cargarDocentes()
+    cargarMaterias()
+    cargarPreguntas()
+    cargarPeriodos()
+  }, [cargarUsuarios, cargarDocentes, cargarMaterias, cargarPreguntas, cargarPeriodos])
+
+  const handleAgregarUsuario = async (nuevo: Partial<UsuarioFila>) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      await crearUsuarioAPI(
+        {
+          numero_cuenta: String(nuevo.numero_cuenta || '').trim(),
+          correo_institucional: String(nuevo.correo_institucional || '').trim(),
+          contrasena: String(nuevo.contrasena || 'demo123'),
+          rol: String(nuevo.rol || 'Docente'),
+        },
+        token
+      )
+      await cargarUsuarios()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleToggleUsuario = async (u: UsuarioFila) => {
+    if (u.numero_cuenta === 'ADMIN001') return
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      await toggleUsuarioAPI(u.id_usuario, !u.activo, token)
+      await cargarUsuarios()
+      await cargarDocentes()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleAgregarDocente = async (nuevo: Partial<DocenteAdmin>) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      const nombreCompleto = String(nuevo.nombre_completo || nuevo.nombre || '').trim()
+      await crearDocenteAPI(
+        {
+          numero_cuenta: String(nuevo.numero_cuenta || '').trim() || undefined,
+          correo_institucional: String(nuevo.correo_institucional || '').trim() || undefined,
+          nombre: nombreCompleto,
+          nombre_completo: nombreCompleto,
+          departamento: String(nuevo.departamento || '').trim(),
+        },
+        token
+      )
+      await cargarDocentes()
+      await cargarUsuarios()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleEliminarDocente = async (docente: DocenteAdmin) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      const res = await eliminarDocenteAPI(docente.id_docente, token)
+      if (res.bajaLogica) {
+        setMensajeInfo(res.mensaje)
+      }
+      await cargarDocentes()
+      await cargarUsuarios()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleAgregarMateria = async (nuevo: Partial<MateriaFila>) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      await crearMateriaAPI(
+        {
+          clave: String(nuevo.clave || '').trim(),
+          nombre: String(nuevo.nombre || nuevo.nombre_materia || '').trim(),
+          creditos: Number(nuevo.creditos ?? 8),
+          crn: nuevo.crn ? Number(nuevo.crn) : undefined,
+          id_docente: nuevo.id_docente ? Number(nuevo.id_docente) : undefined,
+        },
+        token
+      )
+      await cargarMaterias()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleEliminarMateria = async (materia: MateriaFila) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      const idObjetivo = materia.id_crn ?? materia.crn ?? materia.id_materia
+      await eliminarMateriaAPI(idObjetivo, token)
+      await cargarMaterias()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleAgregarPregunta = async (nuevo: Partial<PreguntaAdmin>) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      const texto = String(nuevo.texto_pregunta || nuevo.texto || '').trim()
+      const dimension = String(nuevo.dimension || 'Evaluación Docente').trim()
+      await crearPreguntaAPI(
+        {
+          texto_pregunta: texto,
+          texto,
+          dimension,
+        },
+        token
+      )
+      await cargarPreguntas()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleEliminarPregunta = async (pregunta: PreguntaAdmin) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      await eliminarPreguntaAPI(pregunta.id_pregunta, token)
+      await cargarPreguntas()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleAgregarPeriodo = async (nuevo: Partial<PeriodoAdmin>) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      await crearCicloAPI(
+        {
+          nombre: String(nuevo.nombre || '').trim(),
+          fecha_inicio_eval: String(nuevo.fecha_inicio_eval || ''),
+          fecha_cierre_eval: String(nuevo.fecha_cierre_eval || ''),
+          activo: false,
+        },
+        token
+      )
+      await cargarPeriodos()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
+
+  const handleHabilitarPeriodo = async (idCiclo: number) => {
+    setErrorApi('')
+    setMensajeInfo('')
+    try {
+      await toggleCicloAPI(idCiclo, true, token)
+      await cargarPeriodos()
+    } catch (err) {
+      setErrorApi((err as Error).message)
+    }
+  }
 
   return (
     <Layout
@@ -54,23 +296,45 @@ export default function PanelAdministracion() {
       tono="personal"
       pestañas={pestañas}
       activa={activa}
-      onPestaña={setActiva}
+      onPestaña={(id) => {
+        setActiva(id)
+        setErrorApi('')
+        setMensajeInfo('')
+      }}
     >
+      {errorApi && (
+        <div className="mb-4 rounded-xl bg-[#fee2e2] border border-[#fecaca] px-4 py-3 text-xs font-semibold text-[#dc2626]">
+          {errorApi}
+        </div>
+      )}
+
+      {mensajeInfo && (
+        <div className="mb-4 rounded-xl bg-[#e3f4f2] border border-[#99f6e4] px-4 py-3 text-xs font-semibold text-[#0f766e]">
+          {mensajeInfo}
+        </div>
+      )}
+
       {activa === 'usuarios' && (
-        <Catalogo<UsuarioPersonal>
+        <Catalogo<UsuarioFila>
           titulo="Usuarios de Gestión y Personal"
           columnas={[
-            { id: 'usuario', nombre: 'Cuenta' },
-            { id: 'nombre', nombre: 'Nombre Completo' },
+            { id: 'numero_cuenta', nombre: 'Cuenta' },
+            { id: 'correo_institucional', nombre: 'Correo Institucional', tipo: 'email' },
             {
-              id: 'area',
+              id: 'rol',
               nombre: 'Perfil / Rol',
-              opciones: ['Docente', 'Coordinación', 'Administración'],
+              opciones: ['Docente', 'Coordinador', 'Administrador', 'Alumno'],
               mostrar: (v) => (
                 <span className="px-2.5 py-0.5 rounded-full bg-[#e3f4f2] text-[#0f766e] text-xs font-semibold">
-                  {String(v)}
+                  {String(v || 'Usuario')}
                 </span>
               ),
+            },
+            {
+              id: 'contrasena',
+              nombre: 'Contraseña Inicial',
+              tipo: 'password',
+              ocultarEnTabla: true,
             },
             {
               id: 'activo',
@@ -88,95 +352,117 @@ export default function PanelAdministracion() {
             },
           ]}
           filas={usuarios}
-          clave="usuario"
-          onAgregar={(f) => setUsuarios([...usuarios, { ...(f as UsuarioPersonal), activo: true }])}
-          extra={(f) => (
-            <button
-              className="px-2.5 py-1 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#5d6678] hover:bg-[#f4f6fb] cursor-pointer"
-              onClick={() =>
-                setUsuarios(
-                  usuarios.map((u) =>
-                    u.usuario === f.usuario ? { ...u, activo: !u.activo } : u
-                  )
-                )
-              }
-            >
-              {f.activo ? 'Desactivar' : 'Activar'}
-            </button>
-          )}
+          clave="numero_cuenta"
+          onAgregar={handleAgregarUsuario}
+          extra={(f) => {
+            const esAdminPrincipal = f.numero_cuenta === 'ADMIN001'
+            return (
+              <button
+                disabled={esAdminPrincipal}
+                title={
+                  esAdminPrincipal
+                    ? 'Violación de seguridad: No se puede desactivar la cuenta del administrador principal del sistema.'
+                    : undefined
+                }
+                className={`px-2.5 py-1 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#5d6678] ${
+                  esAdminPrincipal
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-[#f4f6fb] cursor-pointer'
+                }`}
+                onClick={() => handleToggleUsuario(f)}
+              >
+                {f.activo ? 'Desactivar' : 'Activar'}
+              </button>
+            )
+          }}
           nota="Nota de seguridad: Los alumnos se autentican mediante credenciales institucionales de matrícula."
         />
       )}
 
       {activa === 'docentes' && (
-        <Catalogo<DocenteResumen>
+        <Catalogo<DocenteAdmin>
           titulo="Catálogo Institucional de Docentes"
           columnas={[
-            { id: 'id', nombre: 'No. Empleado' },
-            { id: 'nombre', nombre: 'Nombre' },
-            { id: 'area', nombre: 'Departamento' },
-            { id: 'correo', nombre: 'Correo Institucional' },
+            { id: 'id_docente', nombre: 'ID', soloLectura: true },
+            { id: 'numero_cuenta', nombre: 'No. Empleado / Cuenta' },
+            { id: 'nombre_completo', nombre: 'Nombre Completo' },
+            { id: 'departamento', nombre: 'Departamento' },
+            { id: 'correo_institucional', nombre: 'Correo Institucional', tipo: 'email' },
+            {
+              id: 'activo',
+              nombre: 'Estado',
+              soloLectura: true,
+              mostrar: (v) => (
+                <span
+                  className={`font-semibold text-xs ${
+                    v ? 'text-[#15803d]' : 'text-[#dc2626]'
+                  }`}
+                >
+                  {v ? 'Activo' : 'Inactivo'}
+                </span>
+              ),
+            },
           ]}
           filas={listaDocentes}
-          clave="id"
-          onAgregar={(f) => setListaDocentes([...listaDocentes, f as DocenteResumen])}
-          onEliminar={(f) => setListaDocentes(listaDocentes.filter((d) => d.id !== f.id))}
+          clave="id_docente"
+          onAgregar={handleAgregarDocente}
+          onEliminar={handleEliminarDocente}
         />
       )}
 
       {activa === 'materias' && (
-        <Catalogo<MateriaItem>
+        <Catalogo<MateriaFila>
           titulo="Asignaturas y Cursos (CRN)"
           columnas={[
-            { id: 'crn', nombre: 'CRN' },
+            {
+              id: 'crn',
+              nombre: 'CRN',
+              tipo: 'number',
+              mostrar: (v) => (v ? String(v) : 'Sin CRN'),
+            },
             { id: 'clave', nombre: 'Clave' },
             { id: 'nombre', nombre: 'Asignatura' },
-            { id: 'grupo', nombre: 'Grupo' },
+            { id: 'creditos', nombre: 'Créditos', tipo: 'number' },
             {
-              id: 'docenteId',
+              id: 'id_docente',
               nombre: 'Docente Asignado',
-              opciones: listaDocentes.map((d) => d.id),
+              opciones: listaDocentes.map((d) => String(d.id_docente)),
               mostrar: (v) =>
-                listaDocentes.find((d) => d.id === v)?.nombre || String(v),
+                listaDocentes.find((d) => String(d.id_docente) === String(v))?.nombre_completo ||
+                (v ? String(v) : 'Sin asignar'),
             },
           ]}
           filas={listaMaterias}
-          clave="crn"
-          onAgregar={(f) => setListaMaterias([...listaMaterias, f as MateriaItem])}
-          onEliminar={(f) => setListaMaterias(listaMaterias.filter((m) => m.crn !== f.crn))}
+          clave="clave_unica"
+          onAgregar={handleAgregarMateria}
+          onEliminar={handleEliminarMateria}
         />
       )}
 
       {activa === 'preguntas' && (
-        <Catalogo<PreguntaItem>
+        <Catalogo<PreguntaAdmin>
           titulo="Reactivos del Cuestionario Institucional"
           columnas={[
-            { id: 'categoria', nombre: 'Criterio Pedagógico' },
-            { id: 'texto', nombre: 'Reactivo / Pregunta' },
+            { id: 'id_pregunta', nombre: 'No.', soloLectura: true },
+            { id: 'dimension', nombre: 'Criterio Pedagógico' },
+            { id: 'texto_pregunta', nombre: 'Reactivo / Pregunta' },
           ]}
           filas={listaPreguntas}
-          clave="id"
-          onAgregar={(f) =>
-            setListaPreguntas([
-              ...listaPreguntas,
-              { ...(f as PreguntaItem), id: Date.now() },
-            ])
-          }
-          onEliminar={(f) =>
-            setListaPreguntas(listaPreguntas.filter((p) => p.id !== f.id))
-          }
+          clave="id_pregunta"
+          onAgregar={handleAgregarPregunta}
+          onEliminar={handleEliminarPregunta}
           nota="Las respuestas se califican en escala institucional normalizada (0, 2.5, 5.0, 7.5, 10.0)."
         />
       )}
 
       {activa === 'periodos' && (
-        <Catalogo<PeriodoItem>
+        <Catalogo<PeriodoAdmin>
           titulo="Ciclos Escolares y Periodos de Evaluación"
           columnas={[
-            { id: 'id', nombre: 'Clave / ID' },
+            { id: 'id_ciclo', nombre: 'Clave / ID', soloLectura: true },
             { id: 'nombre', nombre: 'Nombre del Ciclo' },
-            { id: 'inicio', nombre: 'Fecha Apertura', tipo: 'date' },
-            { id: 'fin', nombre: 'Fecha Cierre', tipo: 'date' },
+            { id: 'fecha_inicio_eval', nombre: 'Fecha Apertura', tipo: 'date' },
+            { id: 'fecha_cierre_eval', nombre: 'Fecha Cierre', tipo: 'date' },
             {
               id: 'activo',
               nombre: 'Estado',
@@ -192,19 +478,13 @@ export default function PanelAdministracion() {
             },
           ]}
           filas={periodos}
-          clave="id"
-          onAgregar={(f) =>
-            setPeriodos([...periodos, { ...(f as PeriodoItem), activo: false }])
-          }
+          clave="id_ciclo"
+          onAgregar={handleAgregarPeriodo}
           extra={(f) =>
             !f.activo && (
               <button
                 className="px-2.5 py-1 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#0f766e] hover:bg-[#e3f4f2] cursor-pointer"
-                onClick={() =>
-                  setPeriodos(
-                    periodos.map((p) => ({ ...p, activo: p.id === f.id }))
-                  )
-                }
+                onClick={() => handleHabilitarPeriodo(f.id_ciclo)}
               >
                 Habilitar
               </button>
@@ -234,6 +514,7 @@ interface ColumnaConfig<T> {
   tipo?: string
   opciones?: string[]
   soloLectura?: boolean
+  ocultarEnTabla?: boolean
   mostrar?: (valor: any) => ReactNode
 }
 
@@ -259,6 +540,7 @@ function Catalogo<T extends Record<string, any>>({
   nota,
 }: CatalogoProps<T>) {
   const editables = columnas.filter((c) => !c.soloLectura)
+  const columnasTabla = columnas.filter((c) => !c.ocultarEnTabla)
   const vacio = Object.fromEntries(
     editables.map((c) => [c.id, c.opciones ? c.opciones[0] : ''])
   ) as Partial<T>
@@ -279,7 +561,7 @@ function Catalogo<T extends Record<string, any>>({
       return
     }
 
-    if (clave !== 'id' || nuevo.id) {
+    if (nuevo[clave] !== undefined && String(nuevo[clave]).trim() !== '') {
       if (filas.some((f) => String(f[clave]) === String(nuevo[clave]))) {
         setError('Ya existe un registro con ese identificador.')
         return
@@ -305,7 +587,11 @@ function Catalogo<T extends Record<string, any>>({
             className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs w-full sm:w-56 focus:border-[#0f766e]"
           />
           <button
-            onClick={() => setAbierto(!abierto)}
+            onClick={() => {
+              if (!abierto) setNuevo(vacio)
+              setAbierto(!abierto)
+              setError('')
+            }}
             className="px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap cursor-pointer"
           >
             {abierto ? 'Cancelar' : '+ Agregar'}
@@ -371,7 +657,7 @@ function Catalogo<T extends Record<string, any>>({
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-[#e2e6ef] text-[#5d6678] uppercase tracking-wider">
-              {columnas.map((c) => (
+              {columnasTabla.map((c) => (
                 <th key={c.id} className="py-3 px-3 font-semibold">
                   {c.nombre}
                 </th>
@@ -382,7 +668,7 @@ function Catalogo<T extends Record<string, any>>({
           <tbody className="divide-y divide-[#e2e6ef]">
             {visibles.map((f) => (
               <tr key={String(f[clave])} className="hover:bg-[#f4f6fb]/50 transition-colors">
-                {columnas.map((c) => (
+                {columnasTabla.map((c) => (
                   <td key={c.id} className="py-3 px-3 text-[#1c2333]">
                     {c.mostrar ? c.mostrar(f[c.id]) : String(f[c.id] ?? '')}
                   </td>
@@ -406,7 +692,7 @@ function Catalogo<T extends Record<string, any>>({
             {visibles.length === 0 && (
               <tr>
                 <td
-                  colSpan={columnas.length + 1}
+                  colSpan={columnasTabla.length + 1}
                   className="py-8 text-center text-[#5d6678]"
                 >
                   No se encontraron registros.

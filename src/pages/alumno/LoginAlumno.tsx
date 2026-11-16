@@ -68,7 +68,7 @@ export default function LoginAlumno() {
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 mb-5">
+        <div className="flex flex-col gap-1.5 mb-2">
           <label htmlFor="pass" className="text-xs font-semibold text-[#1c2333]">
             Contraseña
           </label>
@@ -80,6 +80,15 @@ export default function LoginAlumno() {
             placeholder="••••••••"
             className="w-full px-3.5 py-2.5 rounded-xl border border-[#e2e6ef] bg-white text-sm focus:border-[#2557d6] focus:ring-2 focus:ring-[#2557d6]/20 transition-all"
           />
+        </div>
+
+        <div className="flex justify-end mb-5">
+          <Link
+            to="/recuperar-password"
+            className="text-xs font-medium text-[#2557d6] hover:text-[#1f47b2] hover:underline transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
         </div>
 
         {error && <p className="text-xs text-[#dc2626] font-medium mb-4">{error}</p>}

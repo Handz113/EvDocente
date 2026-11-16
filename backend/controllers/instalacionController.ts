@@ -458,50 +458,59 @@ export const actualizarInstalacion = async (req: AuthRequest, res: Response): Pr
   }
 
   const { nombre, tipo, descripcion, activa } = req.body ?? {};
-  const campos: string[] = [];
-  const valores: any[] = [];
-  const agregar = (columna: string, valor: any) => {
-    valores.push(valor);
-    campos.push(`${columna} = $${valores.length}`);
-  };
+  let hayCambios = false;
 
+  let nombreVal: string | null = null;
   if (nombre !== undefined) {
     if (typeof nombre !== 'string' || !nombre.trim() || nombre.trim().length > 100) {
       res.status(400).json({ mensaje: 'El nombre es obligatorio (máximo 100 caracteres).' });
       return;
     }
-    agregar('nombre', nombre.trim());
+    nombreVal = nombre.trim();
+    hayCambios = true;
   }
+
+  let tipoVal: string | null = null;
   if (tipo !== undefined) {
     if (typeof tipo !== 'string' || !tipo.trim() || tipo.trim().length > 50) {
       res.status(400).json({ mensaje: 'El tipo es obligatorio (máximo 50 caracteres).' });
       return;
     }
-    agregar('tipo', tipo.trim());
+    tipoVal = tipo.trim();
+    hayCambios = true;
   }
+
+  let descripcionVal: string | null = null;
   if (descripcion !== undefined) {
-    agregar('descripcion', typeof descripcion === 'string' && descripcion.trim() ? descripcion.trim() : null);
+    descripcionVal = typeof descripcion === 'string' && descripcion.trim() ? descripcion.trim() : null;
+    hayCambios = true;
   }
+
+  let activaVal: boolean | null = null;
   if (activa !== undefined) {
     if (typeof activa !== 'boolean') {
       res.status(400).json({ mensaje: 'El campo "activa" debe ser true o false.' });
       return;
     }
-    agregar('activa', activa);
+    activaVal = activa;
+    hayCambios = true;
   }
 
-  if (campos.length === 0) {
+  if (!hayCambios) {
     res.status(400).json({ mensaje: 'No se envió ningún campo para actualizar.' });
     return;
   }
 
   try {
-    valores.push(idInstalacion);
     const { rows } = await pool.query(
-      `UPDATE Instalacion SET ${campos.join(', ')}
-       WHERE id_instalacion = $${valores.length}
+      `UPDATE Instalacion
+       SET nombre = COALESCE($1, nombre),
+           tipo = COALESCE($2, tipo),
+           descripcion = COALESCE($3, descripcion),
+           activa = COALESCE($4, activa)
+       WHERE id_instalacion = $5
        RETURNING id_instalacion, nombre, tipo, descripcion, activa`,
-      valores
+      [nombreVal, tipoVal, descripcionVal, activaVal, idInstalacion]
     );
     if (rows.length === 0) {
       res.status(404).json({ mensaje: 'La instalación no existe.' });
@@ -581,53 +590,61 @@ export const actualizarPregunta = async (req: AuthRequest, res: Response): Promi
   }
 
   const { id_instalacion, dimension, texto, activa } = req.body ?? {};
-  const campos: string[] = [];
-  const valores: any[] = [];
-  const agregar = (columna: string, valor: any) => {
-    valores.push(valor);
-    campos.push(`${columna} = $${valores.length}`);
-  };
+  let hayCambios = false;
 
+  let dimensionVal: string | null = null;
   if (dimension !== undefined) {
     if (!dimensionValida(dimension)) {
       res.status(400).json({ mensaje: `Dimensión inválida. Usa: ${DIMENSIONES.join(', ')}.` });
       return;
     }
-    agregar('dimension', dimension);
+    dimensionVal = dimension;
+    hayCambios = true;
   }
+
+  let textoVal: string | null = null;
   if (texto !== undefined) {
     if (typeof texto !== 'string' || !texto.trim()) {
       res.status(400).json({ mensaje: 'El texto de la pregunta no puede quedar vacío.' });
       return;
     }
-    agregar('texto', texto.trim());
+    textoVal = texto.trim();
+    hayCambios = true;
   }
+
+  let activaVal: boolean | null = null;
   if (activa !== undefined) {
     if (typeof activa !== 'boolean') {
       res.status(400).json({ mensaje: 'El campo "activa" debe ser true o false.' });
       return;
     }
-    agregar('activa', activa);
+    activaVal = activa;
+    hayCambios = true;
   }
 
   try {
+    let instalacionVal: number | null = null;
     if (id_instalacion !== undefined) {
       const instalacion = await validarIdInstalacion(id_instalacion, res);
       if (!instalacion.ok) return;
-      agregar('id_instalacion', instalacion.valor);
+      instalacionVal = instalacion.valor;
+      hayCambios = true;
     }
 
-    if (campos.length === 0) {
+    if (!hayCambios) {
       res.status(400).json({ mensaje: 'No se envió ningún campo para actualizar.' });
       return;
     }
 
-    valores.push(idPregunta);
     const { rows } = await pool.query(
-      `UPDATE PreguntaInstalacion SET ${campos.join(', ')}
-       WHERE id_pregunta_instalacion = $${valores.length}
+      `UPDATE PreguntaInstalacion
+       SET id_instalacion = COALESCE($1, id_instalacion),
+           dimension = COALESCE($2, dimension),
+           texto = COALESCE($3, texto),
+           activa = COALESCE($4, activa)
+       WHERE id_pregunta_instalacion = $5
        RETURNING id_pregunta_instalacion, id_instalacion, dimension, texto, activa`,
-      valores
+      [instalacionVal, dimensionVal, textoVal, activaVal, idPregunta]
     );
     if (rows.length === 0) {
       res.status(404).json({ mensaje: 'La pregunta no existe.' });
