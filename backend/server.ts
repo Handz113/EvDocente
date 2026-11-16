@@ -11,6 +11,7 @@ import cicloRoutes from './routes/cicloRoutes';
 import participacionRoutes from './routes/participacionRoutes';
 import instalacionRoutes from './routes/instalacionRoutes';
 import adminRoutes from './routes/adminRoutes';
+import reporteRoutes from './routes/reporteRoutes';
 
 if (!process.env.JWT_SECRET) {
   console.error('Error crítico de seguridad: JWT_SECRET no está definido en las variables de entorno.');
@@ -49,6 +50,7 @@ app.use('/api/ciclos', cicloRoutes);
 app.use('/api/participacion', participacionRoutes);
 app.use('/api/instalaciones', instalacionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reportes', reporteRoutes);
 
 // =========================
 // FRONTEND COMPILADO (producción)
