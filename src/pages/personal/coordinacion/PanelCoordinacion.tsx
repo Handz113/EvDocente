@@ -128,6 +128,8 @@ export default function PanelCoordinacion() {
   const [listaDocentes, setListaDocentes] = useState<DocenteConMetricas[]>([])
   const [error, setError] = useState('')
   const [resultados, setResultados] = useState<GrupoResultados[]>([])
+  // Resultados por CRN de los docentes que imparten la materia elegida en la gráfica (modo 'materia')
+  const [resultadosMateria, setResultadosMateria] = useState<GrupoResultados[]>([])
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
   const [errorDetalle, setErrorDetalle] = useState('')
   const [modoGrafico, setModoGrafico] = useState<'area' | 'materia'>('area')
@@ -404,6 +406,35 @@ export default function PanelCoordinacion() {
     }
   }, [materiaGrafico, materiasGraficoDisponibles])
 
+  // Gráfica por materia: pide el desglose por CRN de cada docente que imparte la materia elegida,
+  // para no depender de que "Ver detalle" esté abierto
+  useEffect(() => {
+    const token = usuario?.token || ''
+    if (modoGrafico !== 'materia' || !materiaGrafico || !token) {
+      setResultadosMateria([])
+      return
+    }
+    const docentesMateria = listaDocentes.filter((d) => d.materias.some((m) => m.nombre === materiaGrafico))
+    if (docentesMateria.length === 0) {
+      setResultadosMateria([])
+      return
+    }
+    let vigente = true
+    Promise.all(docentesMateria.map((d) => obtenerResultadosDocenteAPI(d.id, token, cicloSeleccionado)))
+      .then((respuestas) => {
+        if (!vigente) return
+        setResultadosMateria(respuestas.flatMap((r) => r.grupos))
+      })
+      .catch((err) => {
+        if (!vigente) return
+        if (err instanceof ErrorAPI && err.status === 401) return sesionVencida()
+      })
+    // Si cambia la materia, el ciclo o llega un refresco antes de responder, se descarta la respuesta anterior
+    return () => {
+      vigente = false
+    }
+  }, [modoGrafico, materiaGrafico, cicloSeleccionado, listaDocentes, usuario?.token, tick])
+
   const datosGrafico = useMemo<DatoGraficoCoordinacion[]>(() => {
     if (listaDocentes.length === 0) return []
 
@@ -499,7 +530,7 @@ export default function PanelCoordinacion() {
     // Modo 'materia': muestra solo la materia seleccionada frente al Promedio General Institucional
     if (!materiaGrafico) return [institucional]
 
-    const detallePorCrn = new Map(resultados.map((g) => [g.crn, g]))
+    const detallePorCrn = new Map(resultadosMateria.map((g) => [String(g.crn), g]))
     const claves = new Set<string>()
     let sumaPonderada = 0
     let evaluacionesTotal = 0
@@ -512,14 +543,11 @@ export default function PanelCoordinacion() {
       for (const m of d.materias) {
         if (m.nombre !== materiaGrafico) continue
         claves.add(m.clave)
-        const resCrn = detallePorCrn.get(m.crn)
-        const promFuente = resCrn ? resCrn.promedio : d.promedio
-        const evalsFuente = resCrn ? resCrn.totalEvaluaciones : d.totalEvaluaciones
-        const origenNota = resCrn
-          ? 'Promedio exacto del CRN'
-          : d.materias.length <= 1
-          ? 'Promedio real del docente'
-          : 'Promedio general del docente'
+        const resCrn = detallePorCrn.get(String(m.crn))
+        // Sin respaldo al promedio general del docente: si el CRN aún no carga, no se suma nada
+        const promFuente = resCrn ? resCrn.promedio : null
+        const evalsFuente = resCrn ? resCrn.totalEvaluaciones : 0
+        const origenNota = resCrn ? 'Promedio exacto del CRN' : 'Cargando resultados del grupo...'
 
         if (promFuente !== null) {
           sumaPonderada += promFuente * evalsFuente
@@ -568,7 +596,7 @@ export default function PanelCoordinacion() {
     materiaGrafico,
     promedioInstitucional,
     totalRespuestasInst,
-    resultados,
+    resultadosMateria,
   ])
 
   const docenteDetalle = seleccionId ? listaDocentes.find((d) => d.id === seleccionId) : null
