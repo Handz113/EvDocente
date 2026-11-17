@@ -176,6 +176,28 @@ export function toggleUsuarioAPI(
   );
 }
 
+export interface EditarUsuarioPayload {
+  numero_cuenta?: string;
+  correo_institucional?: string;
+  contrasena?: string;
+}
+
+/** PATCH /api/admin/usuarios/:id — solo se envían los campos que cambian */
+export function editarUsuarioAPI(
+  id: number | string,
+  datos: EditarUsuarioPayload,
+  token: string
+): Promise<UsuarioAdmin> {
+  return fetchAdmin<UsuarioAdmin>(
+    `/admin/usuarios/${id}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(datos),
+    },
+    token
+  );
+}
+
 // ==========================================================
 // 2. SERVICIOS DE DOCENTES
 // ==========================================================
@@ -340,3 +362,25 @@ export function togglePeriodoAPI(
 }
 
 export const toggleCicloAPI = togglePeriodoAPI;
+
+export interface EditarPeriodoPayload {
+  nombre?: string;
+  fecha_inicio_eval?: string;
+  fecha_cierre_eval?: string;
+}
+
+/** PATCH /api/admin/ciclos/:id — edita nombre y/o fechas del periodo */
+export function editarPeriodoAPI(
+  id: number | string,
+  datos: EditarPeriodoPayload,
+  token: string
+): Promise<PeriodoAdmin> {
+  return fetchAdmin<PeriodoAdmin>(
+    `/admin/ciclos/${id}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(datos),
+    },
+    token
+  );
+}

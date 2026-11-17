@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { PoolClient } from 'pg';
 import pool from '../config/db';
 import { AuthRequest } from '../middlewares/auth';
+import { motivoPeriodoCerrado } from '../services/periodoEvaluacion';
 
 // =========================
 // MÓDULO TALLERES Y LABORATORIOS
@@ -202,6 +203,14 @@ export const crearEvaluacionInstalacion = async (req: AuthRequest, res: Response
     if (!ciclo) {
       await client.query('ROLLBACK');
       res.status(400).json({ mensaje: 'No hay un ciclo escolar activo para registrar la evaluación.' });
+      return;
+    }
+
+    // HU12: no se aceptan evaluaciones fuera del periodo (fechas) del ciclo activo
+    const motivoCierre = await motivoPeriodoCerrado(client, ciclo.id_ciclo);
+    if (motivoCierre) {
+      await client.query('ROLLBACK');
+      res.status(403).json({ mensaje: motivoCierre });
       return;
     }
 

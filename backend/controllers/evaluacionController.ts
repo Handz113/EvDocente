@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../config/db';
+import { motivoPeriodoCerrado } from '../services/periodoEvaluacion';
 
 /**
  * GET /api/evaluaciones/preguntas
@@ -117,7 +118,7 @@ export const crearEvaluacion = async (req: Request, res: Response): Promise<void
     // 1. El front manda el número de CRN visible (ej. 40211); se traduce a id_crn
     //    y se verifica que el alumno esté inscrito en ese CRN.
     const inscripcion = await client.query(
-      `SELECT c.id_crn
+      `SELECT c.id_crn, c.id_ciclo
        FROM CRN c
        INNER JOIN Inscripcion i ON i.id_crn = c.id_crn AND i.id_alumno = $1
        WHERE c.crn = $2`,
@@ -130,6 +131,14 @@ export const crearEvaluacion = async (req: Request, res: Response): Promise<void
       return;
     }
     const idCrn = inscripcion.rows[0].id_crn;
+
+    // HU12: no se aceptan evaluaciones fuera del periodo (fechas) del ciclo del CRN
+    const motivoCierre = await motivoPeriodoCerrado(client, Number(inscripcion.rows[0].id_ciclo));
+    if (motivoCierre) {
+      await client.query('ROLLBACK');
+      res.status(403).json({ mensaje: motivoCierre });
+      return;
+    }
 
     // 2. Usar los nombres reales: Evaluacion, id_alumno, id_crn
     const checkQuery = `

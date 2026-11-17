@@ -3,6 +3,7 @@ import {
   listarUsuarios,
   crearUsuario,
   toggleUsuarioActivo,
+  editarUsuario,
   obtenerDocentesAdmin,
   crearDocente,
   eliminarDocente,
@@ -14,6 +15,7 @@ import {
   eliminarPregunta,
   crearCiclo,
   toggleCicloActivo,
+  editarCiclo,
 } from '../controllers/adminCatalogoController';
 import { listarCiclos } from '../controllers/cicloController';
 import { verificarToken, verificarRol } from '../middlewares/auth';
@@ -25,7 +27,7 @@ const soloAdmin = [verificarToken, verificarRol(['Administrador'])] as const;
 router.get('/usuarios', ...soloAdmin, listarUsuarios);
 router.post('/usuarios', ...soloAdmin, crearUsuario);
 router.patch('/usuarios/:id/activo', ...soloAdmin, toggleUsuarioActivo);
-router.patch('/usuarios/:id', ...soloAdmin, toggleUsuarioActivo);
+router.patch('/usuarios/:id', ...soloAdmin, editarUsuario);
 
 // 2. Catálogo de Docentes
 router.get('/docentes', ...soloAdmin, obtenerDocentesAdmin);
@@ -49,11 +51,11 @@ router.delete('/preguntas/:id', ...soloAdmin, eliminarPregunta);
 router.get('/ciclos', ...soloAdmin, listarCiclos);
 router.post('/ciclos', ...soloAdmin, crearCiclo);
 router.patch('/ciclos/:id/activo', ...soloAdmin, toggleCicloActivo);
-router.patch('/ciclos/:id', ...soloAdmin, toggleCicloActivo);
+router.patch('/ciclos/:id', ...soloAdmin, editarCiclo);
 
 router.get('/periodos', ...soloAdmin, listarCiclos);
 router.post('/periodos', ...soloAdmin, crearCiclo);
 router.patch('/periodos/:id/activo', ...soloAdmin, toggleCicloActivo);
-router.patch('/periodos/:id', ...soloAdmin, toggleCicloActivo);
+router.patch('/periodos/:id', ...soloAdmin, editarCiclo);
 
 export default router;

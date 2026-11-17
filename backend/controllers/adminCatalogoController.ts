@@ -178,6 +178,96 @@ export const toggleUsuarioActivo = async (req: AuthRequest, res: Response): Prom
 // ============================================================================
 
 /**
+ * PATCH /api/admin/usuarios/:id
+ * Edita numero_cuenta, correo_institucional y/o contrasena (solo los campos enviados).
+ * Compatibilidad: si el body solo trae { activo }, delega en toggleUsuarioActivo.
+ */
+export const editarUsuario = async (req: AuthRequest, res: Response): Promise<void> => {
+  const body = req.body ?? {};
+  const traeCuenta = body.numero_cuenta !== undefined;
+  const traeCorreo = body.correo_institucional !== undefined;
+  const traeContrasena = body.contrasena !== undefined && body.contrasena !== '';
+
+  if (!traeCuenta && !traeCorreo && !traeContrasena) {
+    await toggleUsuarioActivo(req, res);
+    return;
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ mensaje: 'El id del usuario no es válido.' });
+    return;
+  }
+
+  const numeroCuenta = traeCuenta ? String(body.numero_cuenta).trim() : null;
+  const correo = traeCorreo ? String(body.correo_institucional).trim().toLowerCase() : null;
+
+  if (traeCuenta && !numeroCuenta) {
+    res.status(400).json({ mensaje: 'El número de cuenta no puede quedar vacío.' });
+    return;
+  }
+  if (traeCorreo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo as string)) {
+    res.status(400).json({ mensaje: 'El correo institucional no tiene un formato válido.' });
+    return;
+  }
+  if (traeContrasena && String(body.contrasena).length < 6) {
+    res.status(400).json({ mensaje: 'La contraseña debe tener al menos 6 caracteres.' });
+    return;
+  }
+
+  try {
+    const checkUser = await pool.query(
+      'SELECT numero_cuenta FROM Usuario WHERE id_usuario = $1 LIMIT 1;',
+      [id]
+    );
+    if (checkUser.rowCount === 0) {
+      res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      return;
+    }
+    if (
+      checkUser.rows[0].numero_cuenta === 'ADMIN001' &&
+      traeCuenta &&
+      numeroCuenta !== 'ADMIN001'
+    ) {
+      res.status(403).json({
+        mensaje: 'No se puede cambiar el número de cuenta del administrador principal del sistema.',
+      });
+      return;
+    }
+
+    const hashContrasena = traeContrasena
+      ? await bcrypt.hash(String(body.contrasena), await bcrypt.genSalt(10))
+      : null;
+
+    const { rows, rowCount } = await pool.query(
+      `UPDATE Usuario
+       SET numero_cuenta = COALESCE($1, numero_cuenta),
+           correo_institucional = COALESCE($2, correo_institucional),
+           contrasena = COALESCE($3, contrasena)
+       WHERE id_usuario = $4
+       RETURNING id_usuario, numero_cuenta, correo_institucional, id_rol, activo;`,
+      [numeroCuenta, correo, hashContrasena, id]
+    );
+
+    if (rowCount === 0) {
+      res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      return;
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error: any) {
+    if (error?.code === '23505') {
+      res.status(409).json({
+        mensaje: 'Ya existe otro usuario con ese número de cuenta o correo institucional.',
+      });
+      return;
+    }
+    console.error('Error al editar usuario:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor al editar el usuario.' });
+  }
+};
+
+/**
  * GET /api/admin/docentes
  * INNER JOIN entre Docente y Usuario para devolver: id_docente, id_usuario,
  * nombre completo, departamento y estado activo del usuario.
@@ -780,5 +870,93 @@ export const toggleCicloActivo = async (req: AuthRequest, res: Response): Promis
   } catch (error) {
     console.error('Error al actualizar el estado del ciclo escolar:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor al actualizar el ciclo escolar.' });
+  }
+};
+
+/** Valida una fecha en formato AAAA-MM-DD y que exista en el calendario. */
+const esFechaValida = (valor: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+  const [a, m, d] = valor.split('-').map(Number);
+  const fecha = new Date(Date.UTC(a, m - 1, d));
+  return fecha.getUTCFullYear() === a && fecha.getUTCMonth() === m - 1 && fecha.getUTCDate() === d;
+};
+
+/**
+ * PATCH /api/admin/ciclos/:id y /api/admin/periodos/:id
+ * Edita nombre, fecha_inicio_eval y/o fecha_cierre_eval (cualquier combinación).
+ * Compatibilidad: si el body solo trae { activo }, delega en toggleCicloActivo.
+ */
+export const editarCiclo = async (req: AuthRequest, res: Response): Promise<void> => {
+  const body = req.body ?? {};
+  const traeNombre = body.nombre !== undefined;
+  const traeInicio = body.fecha_inicio_eval !== undefined;
+  const traeCierre = body.fecha_cierre_eval !== undefined;
+
+  if (!traeNombre && !traeInicio && !traeCierre) {
+    await toggleCicloActivo(req, res);
+    return;
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ mensaje: 'El id del ciclo escolar no es válido.' });
+    return;
+  }
+
+  const nombre = traeNombre ? String(body.nombre).trim() : null;
+  const inicio = traeInicio ? String(body.fecha_inicio_eval).trim() : null;
+  const cierre = traeCierre ? String(body.fecha_cierre_eval).trim() : null;
+
+  if (traeNombre && !nombre) {
+    res.status(400).json({ mensaje: 'El nombre del ciclo no puede quedar vacío.' });
+    return;
+  }
+  if ((inicio !== null && !esFechaValida(inicio)) || (cierre !== null && !esFechaValida(cierre))) {
+    res.status(400).json({ mensaje: 'Las fechas deben tener el formato AAAA-MM-DD.' });
+    return;
+  }
+
+  try {
+    const actual = await pool.query(
+      `SELECT to_char(fecha_inicio_eval, 'YYYY-MM-DD') AS inicio,
+              to_char(fecha_cierre_eval, 'YYYY-MM-DD') AS cierre
+       FROM CicloEscolar
+       WHERE id_ciclo = $1;`,
+      [id]
+    );
+    if (actual.rowCount === 0) {
+      res.status(404).json({ mensaje: 'Ciclo escolar no encontrado.' });
+      return;
+    }
+
+    // Se compara con la combinación final (lo enviado + lo que ya estaba guardado)
+    const inicioFinal = inicio ?? actual.rows[0].inicio;
+    const cierreFinal = cierre ?? actual.rows[0].cierre;
+    if (inicioFinal && cierreFinal && cierreFinal < inicioFinal) {
+      res.status(400).json({
+        mensaje: 'La fecha de cierre no puede ser anterior a la fecha de apertura.',
+      });
+      return;
+    }
+
+    const { rows, rowCount } = await pool.query(
+      `UPDATE CicloEscolar
+       SET nombre = COALESCE($1, nombre),
+           fecha_inicio_eval = COALESCE($2::date, fecha_inicio_eval),
+           fecha_cierre_eval = COALESCE($3::date, fecha_cierre_eval)
+       WHERE id_ciclo = $4
+       RETURNING id_ciclo, nombre, fecha_inicio_eval, fecha_cierre_eval, activo;`,
+      [nombre, inicio, cierre, id]
+    );
+
+    if (rowCount === 0) {
+      res.status(404).json({ mensaje: 'Ciclo escolar no encontrado.' });
+      return;
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error('Error al editar el ciclo escolar:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor al editar el ciclo escolar.' });
   }
 };
