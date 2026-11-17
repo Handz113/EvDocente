@@ -23,6 +23,8 @@ import {
 interface Props {
   /** Área del panel, para mandar a su login si la sesión venció */
   area: 'coordinacion' | 'administracion'
+  /** Cambia cada vez que el panel pide refrescar los datos (tiempo real). Opcional. */
+  refresco?: number
 }
 
 interface DatoGraficoParticipacion {
@@ -93,7 +95,7 @@ function TooltipParticipacion({ active, payload }: TooltipContentProps) {
 }
 
 /** Lista de participación: solo indica si cada alumno respondió, nunca qué respondió. */
-export default function ParticipacionAlumnos({ area }: Props) {
+export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
   const { usuario, cerrarSesion } = useAuth()
   const navigate = useNavigate()
   const [filas, setFilas] = useState<ParticipacionAPI[]>([])
@@ -110,6 +112,7 @@ export default function ParticipacionAlumnos({ area }: Props) {
   useEffect(() => {
     obtenerParticipacionAPI(usuario?.token || '')
       .then((data) => {
+        setError('')
         setFilas(data.participacion)
         setResumen(data.resumen)
       })
@@ -122,7 +125,7 @@ export default function ParticipacionAlumnos({ area }: Props) {
         setError(err.message)
       })
       .finally(() => setCargando(false))
-  }, [usuario?.token])
+  }, [usuario?.token, refresco])
 
   const materias = [...new Map(filas.map((f) => [f.crn, f])).values()]
   const texto = busqueda.trim().toLowerCase()

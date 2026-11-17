@@ -49,6 +49,18 @@ interface DatoGraficoCoordinacion {
   subtitulo?: string
 }
 
+/** Cada cuánto se vuelven a pedir los datos al backend (tiempo real). */
+const INTERVALO_ACTUALIZACION_MS = 30_000
+
+function textoHaceCuanto(fecha: Date | null, ahora: number): string {
+  if (!fecha) return 'Cargando datos...'
+  const seg = Math.max(0, Math.round((ahora - fecha.getTime()) / 1000))
+  if (seg < 5) return 'Actualizado justo ahora'
+  if (seg < 60) return `Actualizado hace ${seg} s`
+  const min = Math.floor(seg / 60)
+  return `Actualizado hace ${min} min`
+}
+
 function acortarEtiqueta(texto: string, max = 18): string {
   return texto.length > max ? `${texto.slice(0, max - 1)}…` : texto
 }
@@ -124,11 +136,39 @@ export default function PanelCoordinacion() {
   const [isExporting, setIsExporting] = useState(false)
   const [menuExportarAbierto, setMenuExportarAbierto] = useState(false)
   const menuExportarRef = useRef<HTMLDivElement | null>(null)
+  // Tiempo real: 'tick' cambia cada INTERVALO_ACTUALIZACION_MS y dispara una nueva consulta
+  const [tick, setTick] = useState(0)
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null)
+  const [ahora, setAhora] = useState(() => Date.now())
+  const detalleClaveRef = useRef('')
 
   const sesionVencida = () => {
     cerrarSesion()
     navigate('/personal/coordinacion/login', { replace: true })
   }
+
+  // Refresco automático: solo cuando la pestaña está visible, para no gastar peticiones en segundo plano
+  useEffect(() => {
+    const intervalo = window.setInterval(() => {
+      if (document.visibilityState === 'visible') setTick((t) => t + 1)
+    }, INTERVALO_ACTUALIZACION_MS)
+    const alVolverALaPestana = () => {
+      if (document.visibilityState === 'visible') setTick((t) => t + 1)
+    }
+    document.addEventListener('visibilitychange', alVolverALaPestana)
+    return () => {
+      window.clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', alVolverALaPestana)
+    }
+  }, [])
+
+  // Reloj para el texto "Actualizado hace X s"
+  useEffect(() => {
+    const reloj = window.setInterval(() => setAhora(Date.now()), 5_000)
+    return () => window.clearInterval(reloj)
+  }, [])
+
+  const actualizarAhora = () => setTick((t) => t + 1)
 
   useEffect(() => {
     if (!menuExportarAbierto) return
@@ -214,14 +254,27 @@ export default function PanelCoordinacion() {
   const descargarCSV = () => ejecutarDescarga('csv', 'reporte.csv')
 
   useEffect(() => {
-    if (!seleccionId) return
+    if (!seleccionId) {
+      detalleClaveRef.current = ''
+      return
+    }
+    // Si solo cambió 'tick' es un refresco: se actualiza sin vaciar la vista ni mostrar "Cargando"
+    const clave = `${seleccionId}|${cicloSeleccionado}`
+    const esRefresco = detalleClaveRef.current === clave
+    detalleClaveRef.current = clave
     let vigente = true
-    setResultados([])
-    setErrorDetalle('')
-    setCargandoDetalle(true)
+    if (!esRefresco) {
+      setResultados([])
+      setErrorDetalle('')
+      setCargandoDetalle(true)
+    }
     // GET /api/docentes/:id/resultados — desglose por CRN, comentarios anónimos
     obtenerResultadosDocenteAPI(seleccionId, usuario?.token || '', cicloSeleccionado)
-      .then((data) => vigente && setResultados(data.grupos))
+      .then((data) => {
+        if (!vigente) return
+        setResultados(data.grupos)
+        setErrorDetalle('')
+      })
       .catch((err) => {
         if (!vigente) return
         if (err instanceof ErrorAPI && err.status === 401) return sesionVencida()
@@ -232,7 +285,7 @@ export default function PanelCoordinacion() {
     return () => {
       vigente = false
     }
-  }, [seleccionId, usuario?.token, cicloSeleccionado])
+  }, [seleccionId, usuario?.token, cicloSeleccionado, tick])
 
   // 1. Carga inicial del catálogo de ciclos escolares
   useEffect(() => {
@@ -257,9 +310,9 @@ export default function PanelCoordinacion() {
   useEffect(() => {
     const token = usuario?.token || ''
     if (!token || !cicloSeleccionado) return
+    let vigente = true
 
     const consultarDocentes = async () => {
-      setError('')
       const docentes = await listarDocentesAPI(token, cicloSeleccionado)
       const metricas: DocenteConMetricas[] = await Promise.all(
         docentes.map(async (d) => {
@@ -277,14 +330,22 @@ export default function PanelCoordinacion() {
           }
         })
       )
+      // Si llegó una respuesta más nueva (u otro ciclo) mientras esta tardaba, se descarta
+      if (!vigente) return
       setListaDocentes(metricas)
+      setError('')
+      setUltimaActualizacion(new Date())
     }
 
     consultarDocentes().catch((err) => {
+      if (!vigente) return
       if (err instanceof ErrorAPI && err.status === 401) return sesionVencida()
       setError(err.message)
     })
-  }, [usuario?.token, cicloSeleccionado])
+    return () => {
+      vigente = false
+    }
+  }, [usuario?.token, cicloSeleccionado, tick])
 
   const areasDisponibles = [...new Set(listaDocentes.map((r) => r.area))]
 
@@ -521,6 +582,22 @@ export default function PanelCoordinacion() {
             <p className="text-sm text-[#5d6678]">
               Monitoreo de desempeño para asignación docente (ciclos activos e históricos).
             </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e3f4f2] text-[#0f766e] text-[11px] font-semibold">
+                <span className="relative flex w-2 h-2">
+                  <span className="absolute inline-flex w-full h-full rounded-full bg-[#14b8a6] opacity-75 animate-ping motion-reduce:animate-none" />
+                  <span className="relative inline-flex w-2 h-2 rounded-full bg-[#0f766e]" />
+                </span>
+                En vivo · {textoHaceCuanto(ultimaActualizacion, ahora)}
+              </span>
+              <button
+                type="button"
+                onClick={actualizarAhora}
+                className="px-2.5 py-1 rounded-full border border-[#e2e6ef] text-[11px] font-semibold text-[#5d6678] hover:text-[#0f766e] hover:bg-[#e3f4f2] transition-colors cursor-pointer"
+              >
+                Actualizar ahora
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -927,10 +1004,10 @@ export default function PanelCoordinacion() {
       )}
 
       {/* Participación: solo Respondió / Pendiente, sin calificaciones */}
-      <ParticipacionAlumnos area="coordinacion" />
+      <ParticipacionAlumnos area="coordinacion" refresco={tick} />
 
       {/* Talleres y laboratorios: promedios y comentarios anónimos */}
-      <ResultadosInstalaciones area="coordinacion" />
+      <ResultadosInstalaciones area="coordinacion" refresco={tick} />
 
     </Layout>
   )

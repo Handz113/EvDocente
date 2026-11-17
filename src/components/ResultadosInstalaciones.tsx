@@ -25,6 +25,8 @@ import {
 interface Props {
   /** Área del panel, para mandar a su login si la sesión venció */
   area: 'coordinacion' | 'administracion'
+  /** Cambia cada vez que el panel pide refrescar los datos (tiempo real). Opcional. */
+  refresco?: number
 }
 
 interface DatoIndiceInstalacion {
@@ -140,7 +142,7 @@ function TooltipParticipacionInstalacion({ active, payload }: TooltipContentProp
 }
 
 /** Resultados anónimos de talleres y laboratorios del ciclo activo. */
-export default function ResultadosInstalaciones({ area }: Props) {
+export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
   const { usuario, cerrarSesion } = useAuth()
   const navigate = useNavigate()
   const [ciclo, setCiclo] = useState<CicloAPI | null>(null)
@@ -157,6 +159,7 @@ export default function ResultadosInstalaciones({ area }: Props) {
     // GET /api/instalaciones/resultados — ciclo activo por defecto
     obtenerResultadosInstalacionesAPI(usuario?.token || '')
       .then((data) => {
+        setError('')
         setCiclo(data.ciclo)
         setFilas(data.instalaciones)
       })
@@ -169,7 +172,7 @@ export default function ResultadosInstalaciones({ area }: Props) {
         setError(err.message)
       })
       .finally(() => setCargando(false))
-  }, [usuario?.token])
+  }, [usuario?.token, refresco])
 
   const detalle = seleccionId !== null ? filas.find((f) => f.id === seleccionId) : null
 
