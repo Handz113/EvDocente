@@ -18,6 +18,7 @@ export interface Instalacion {
   nombre: string
   tipo: string
   descripcion: string | null
+  carrera?: string | null
   activa: boolean
 }
 
@@ -52,6 +53,7 @@ export interface NuevaInstalacion {
   nombre: string
   tipo: string
   descripcion?: string
+  carrera?: string | null
 }
 
 export interface NuevaPregunta {
@@ -105,13 +107,18 @@ export function obtenerResultadosInstalacionesAPI(token: string, idCiclo?: numbe
 
 // ---------- Administración ----------
 
-/** GET /api/instalaciones/catalogo — todas, incluidas inactivas */
+/** GET /api/instalaciones/catalogo — todas, incluidas inactivas, más carreras disponibles */
 export function obtenerCatalogoInstalacionesAPI(token: string) {
-  return peticion<{ instalaciones: Instalacion[]; preguntas: PreguntaInstalacion[] }>(
-    '/instalaciones/catalogo',
-    {},
-    token
-  )
+  return peticion<{
+    instalaciones: Instalacion[]
+    preguntas: PreguntaInstalacion[]
+    carrerasDisponibles: string[]
+  }>('/instalaciones/catalogo', {}, token)
+}
+
+/** GET /api/instalaciones/carreras — carreras disponibles en Alumno */
+export function obtenerCarrerasInstalacionesAPI(token: string) {
+  return peticion<{ carrerasDisponibles: string[] }>('/instalaciones/carreras', {}, token)
 }
 
 /** POST /api/instalaciones */

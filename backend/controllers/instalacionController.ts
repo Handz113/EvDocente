@@ -40,8 +40,83 @@ const mapearInstalacion = (r: any) => ({
   nombre: r.nombre,
   tipo: r.tipo,
   descripcion: r.descripcion,
+  carrera: r.carrera ?? null,
   activa: r.activa,
 });
+
+const normalizarCarrera = (valor: unknown): { ok: boolean; valor: string | null } => {
+  if (valor === null || valor === undefined) return { ok: true, valor: null };
+  if (typeof valor !== 'string') return { ok: false, valor: null };
+  const limpia = valor.trim();
+  if (!limpia || limpia.toLowerCase() === 'todas' || limpia.toLowerCase() === 'todas las carreras') {
+    return { ok: true, valor: null };
+  }
+  if (limpia.length > 150) return { ok: false, valor: null };
+  return { ok: true, valor: limpia };
+};
+
+/**
+ * Consulta la carrera y si el alumno corresponde a la cuenta demo ALU001
+ * (única excepción habilitada para ver/evaluar todas las instalaciones).
+ */
+const obtenerPerfilAlumno = async (
+  db: PoolClient | typeof pool,
+  idAlumno: number
+): Promise<{ carrera: string; esDemo: boolean } | null> => {
+  const { rows } = await db.query(
+    `SELECT COALESCE(TRIM(a.carrera), '') AS carrera,
+            UPPER(TRIM(u.numero_cuenta)) = 'ALU001' AS es_demo
+     FROM Alumno a
+     INNER JOIN Usuario u ON u.id_usuario = a.id_usuario
+     WHERE a.id_alumno = $1
+     LIMIT 1`,
+    [idAlumno]
+  );
+  if (rows.length === 0) return null;
+  return {
+    carrera: rows[0].carrera,
+    esDemo: Boolean(rows[0].es_demo),
+  };
+};
+
+/** Valida en SQL si el alumno puede acceder a la instalación según su carrera (o por ser ALU001). */
+const validarAccesoAlumnoInstalacion = async (
+  db: PoolClient | typeof pool,
+  idAlumno: number,
+  carreraInstalacion: string | null
+): Promise<{ existeAlumno: boolean; permitido: boolean }> => {
+  const { rows } = await db.query(
+    `SELECT (
+              UPPER(TRIM(u.numero_cuenta)) = 'ALU001'
+              OR $2::varchar IS NULL
+              OR TRIM($2::varchar) = ''
+              OR (
+                a.carrera IS NOT NULL
+                AND TRIM(a.carrera) <> ''
+                AND LOWER(TRIM($2::varchar)) = LOWER(TRIM(a.carrera))
+              )
+            ) AS permitido
+     FROM Alumno a
+     INNER JOIN Usuario u ON u.id_usuario = a.id_usuario
+     WHERE a.id_alumno = $1
+     LIMIT 1`,
+    [idAlumno, carreraInstalacion]
+  );
+  if (rows.length === 0) return { existeAlumno: false, permitido: false };
+  return { existeAlumno: true, permitido: Boolean(rows[0].permitido) };
+};
+
+const obtenerCarrerasDisponibles = async (
+  db: PoolClient | typeof pool = pool
+): Promise<string[]> => {
+  const { rows } = await db.query(
+    `SELECT DISTINCT TRIM(carrera) AS carrera
+     FROM Alumno
+     WHERE carrera IS NOT NULL AND TRIM(carrera) <> ''
+     ORDER BY 1`
+  );
+  return rows.map((r) => r.carrera as string);
+};
 
 const mapearPregunta = (r: any) => ({
   id: r.id_pregunta_instalacion,
@@ -67,17 +142,29 @@ export const listarInstalacionesAlumno = async (req: AuthRequest, res: Response)
   }
 
   try {
+    const perfil = await obtenerPerfilAlumno(pool, idAlumno);
+    if (!perfil) {
+      res.status(404).json({ mensaje: 'No se encontró el perfil del alumno.' });
+      return;
+    }
+
     const ciclo = await obtenerCicloActivo();
     const { rows } = await pool.query(
-      `SELECT i.id_instalacion, i.nombre, i.tipo, i.descripcion, i.activa,
+      `SELECT i.id_instalacion, i.nombre, i.tipo, i.descripcion, i.carrera, i.activa,
               EXISTS (
                 SELECT 1 FROM EvaluacionInstalacion e
                 WHERE e.id_instalacion = i.id_instalacion AND e.id_alumno = $1 AND e.id_ciclo = $2
               ) AS evaluada
        FROM Instalacion i
        WHERE i.activa = TRUE
+         AND (
+           $3::boolean = TRUE
+           OR i.carrera IS NULL
+           OR TRIM(i.carrera) = ''
+           OR ($4::text <> '' AND LOWER(TRIM(i.carrera)) = LOWER(TRIM($4)))
+         )
        ORDER BY i.nombre`,
-      [idAlumno, ciclo?.id_ciclo ?? null]
+      [idAlumno, ciclo?.id_ciclo ?? null, perfil.esDemo, perfil.carrera]
     );
 
     res.json({
@@ -109,11 +196,21 @@ export const obtenerPreguntasInstalacion = async (req: AuthRequest, res: Respons
 
   try {
     const instalacion = await pool.query(
-      'SELECT id_instalacion, nombre, tipo, descripcion, activa FROM Instalacion WHERE id_instalacion = $1 AND activa = TRUE',
+      'SELECT id_instalacion, nombre, tipo, descripcion, carrera, activa FROM Instalacion WHERE id_instalacion = $1 AND activa = TRUE',
       [idInstalacion]
     );
     if (instalacion.rows.length === 0) {
       res.status(404).json({ mensaje: 'La instalación no existe o no está activa.' });
+      return;
+    }
+
+    const acceso = await validarAccesoAlumnoInstalacion(pool, idAlumno, instalacion.rows[0].carrera);
+    if (!acceso.existeAlumno) {
+      res.status(404).json({ mensaje: 'No se encontró el perfil del alumno.' });
+      return;
+    }
+    if (!acceso.permitido) {
+      res.status(403).json({ mensaje: 'Esta instalación no corresponde a tu carrera.' });
       return;
     }
 
@@ -190,12 +287,24 @@ export const crearEvaluacionInstalacion = async (req: AuthRequest, res: Response
     await client.query('BEGIN');
 
     const instalacion = await client.query(
-      'SELECT nombre FROM Instalacion WHERE id_instalacion = $1 AND activa = TRUE',
+      'SELECT nombre, carrera FROM Instalacion WHERE id_instalacion = $1 AND activa = TRUE',
       [idInstalacion]
     );
     if (instalacion.rows.length === 0) {
       await client.query('ROLLBACK');
       res.status(404).json({ mensaje: 'La instalación no existe o no está activa.' });
+      return;
+    }
+
+    const acceso = await validarAccesoAlumnoInstalacion(client, idAlumno, instalacion.rows[0].carrera);
+    if (!acceso.existeAlumno) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ mensaje: 'No se encontró el perfil del alumno.' });
+      return;
+    }
+    if (!acceso.permitido) {
+      await client.query('ROLLBACK');
+      res.status(403).json({ mensaje: 'Esta instalación no corresponde a tu carrera.' });
       return;
     }
 
@@ -327,7 +436,7 @@ export const obtenerResultadosInstalaciones = async (req: AuthRequest, res: Resp
 
     // Instalaciones activas, más las inactivas que sí tengan evaluaciones en el ciclo
     const generales = await pool.query(
-      `SELECT i.id_instalacion, i.nombre, i.tipo, i.descripcion, i.activa,
+      `SELECT i.id_instalacion, i.nombre, i.tipo, i.descripcion, i.carrera, i.activa,
               COUNT(e.id_evaluacion_instalacion)::int AS total, AVG(e.promedio) AS promedio
        FROM Instalacion i
        LEFT JOIN EvaluacionInstalacion e ON e.id_instalacion = i.id_instalacion AND e.id_ciclo = $1
@@ -404,20 +513,35 @@ export const obtenerResultadosInstalaciones = async (req: AuthRequest, res: Resp
 // ADMINISTRACIÓN — CATÁLOGO
 // ==========================================================
 
-/** GET /api/instalaciones/catalogo — todas las instalaciones y preguntas, incluidas inactivas. */
+/** GET /api/instalaciones/carreras — listado distinto de carreras existentes en Alumno. */
+export const listarCarrerasInstalaciones = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const carrerasDisponibles = await obtenerCarrerasDisponibles();
+    res.json({ carrerasDisponibles });
+  } catch (error) {
+    console.error('Error al obtener las carreras disponibles:', error);
+    res.status(500).json({ mensaje: 'Error interno del servidor al obtener las carreras.' });
+  }
+};
+
+/** GET /api/instalaciones/catalogo — todas las instalaciones, preguntas y carreras disponibles. */
 export const obtenerCatalogo = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const instalaciones = await pool.query(
-      'SELECT id_instalacion, nombre, tipo, descripcion, activa FROM Instalacion ORDER BY nombre'
-    );
-    const preguntas = await pool.query(
-      `SELECT p.id_pregunta_instalacion, p.id_instalacion, p.dimension, p.texto, p.activa
-       FROM PreguntaInstalacion p
-       ORDER BY p.id_instalacion NULLS FIRST, ${ORDEN_DIMENSION}, p.id_pregunta_instalacion`
-    );
+    const [instalaciones, preguntas, carrerasDisponibles] = await Promise.all([
+      pool.query(
+        'SELECT id_instalacion, nombre, tipo, descripcion, carrera, activa FROM Instalacion ORDER BY nombre'
+      ),
+      pool.query(
+        `SELECT p.id_pregunta_instalacion, p.id_instalacion, p.dimension, p.texto, p.activa
+         FROM PreguntaInstalacion p
+         ORDER BY p.id_instalacion NULLS FIRST, ${ORDEN_DIMENSION}, p.id_pregunta_instalacion`
+      ),
+      obtenerCarrerasDisponibles(),
+    ]);
     res.json({
       instalaciones: instalaciones.rows.map(mapearInstalacion),
       preguntas: preguntas.rows.map(mapearPregunta),
+      carrerasDisponibles,
     });
   } catch (error) {
     console.error('Error al obtener el catálogo de instalaciones:', error);
@@ -425,9 +549,9 @@ export const obtenerCatalogo = async (_req: AuthRequest, res: Response): Promise
   }
 };
 
-/** POST /api/instalaciones — body { nombre, tipo, descripcion? } */
+/** POST /api/instalaciones — body { nombre, tipo, descripcion?, carrera? } */
 export const crearInstalacion = async (req: AuthRequest, res: Response): Promise<void> => {
-  const { nombre, tipo, descripcion } = req.body ?? {};
+  const { nombre, tipo, descripcion, carrera } = req.body ?? {};
   const nombreLimpio = typeof nombre === 'string' ? nombre.trim() : '';
   const tipoLimpio = typeof tipo === 'string' ? tipo.trim() : '';
 
@@ -440,12 +564,23 @@ export const crearInstalacion = async (req: AuthRequest, res: Response): Promise
     return;
   }
 
+  const carreraNorm = normalizarCarrera(carrera);
+  if (!carreraNorm.ok) {
+    res.status(400).json({ mensaje: 'La carrera debe ser un texto de máximo 150 caracteres o null.' });
+    return;
+  }
+
   try {
     const { rows } = await pool.query(
-      `INSERT INTO Instalacion (nombre, tipo, descripcion)
-       VALUES ($1, $2, $3)
-       RETURNING id_instalacion, nombre, tipo, descripcion, activa`,
-      [nombreLimpio, tipoLimpio, typeof descripcion === 'string' && descripcion.trim() ? descripcion.trim() : null]
+      `INSERT INTO Instalacion (nombre, tipo, descripcion, carrera)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id_instalacion, nombre, tipo, descripcion, carrera, activa`,
+      [
+        nombreLimpio,
+        tipoLimpio,
+        typeof descripcion === 'string' && descripcion.trim() ? descripcion.trim() : null,
+        carreraNorm.valor,
+      ]
     );
     res.status(201).json({ mensaje: 'Instalación creada.', instalacion: mapearInstalacion(rows[0]) });
   } catch (error: any) {
@@ -458,7 +593,7 @@ export const crearInstalacion = async (req: AuthRequest, res: Response): Promise
   }
 };
 
-/** PATCH /api/instalaciones/:id — body con cualquiera de { nombre, tipo, descripcion, activa } */
+/** PATCH /api/instalaciones/:id — body con cualquiera de { nombre, tipo, descripcion, carrera, activa } */
 export const actualizarInstalacion = async (req: AuthRequest, res: Response): Promise<void> => {
   const idInstalacion = idNumerico(req.params.id);
   if (!idInstalacion) {
@@ -466,7 +601,8 @@ export const actualizarInstalacion = async (req: AuthRequest, res: Response): Pr
     return;
   }
 
-  const { nombre, tipo, descripcion, activa } = req.body ?? {};
+  const body = req.body ?? {};
+  const { nombre, tipo, descripcion, carrera, activa } = body;
   let hayCambios = false;
 
   let nombreVal: string | null = null;
@@ -505,6 +641,19 @@ export const actualizarInstalacion = async (req: AuthRequest, res: Response): Pr
     hayCambios = true;
   }
 
+  const actualizarCarrera =
+    Object.prototype.hasOwnProperty.call(body, 'carrera') && carrera !== undefined;
+  let carreraVal: string | null = null;
+  if (actualizarCarrera) {
+    const carreraNorm = normalizarCarrera(carrera);
+    if (!carreraNorm.ok) {
+      res.status(400).json({ mensaje: 'La carrera debe ser un texto de máximo 150 caracteres o null.' });
+      return;
+    }
+    carreraVal = carreraNorm.valor;
+    hayCambios = true;
+  }
+
   if (!hayCambios) {
     res.status(400).json({ mensaje: 'No se envió ningún campo para actualizar.' });
     return;
@@ -516,10 +665,11 @@ export const actualizarInstalacion = async (req: AuthRequest, res: Response): Pr
        SET nombre = COALESCE($1, nombre),
            tipo = COALESCE($2, tipo),
            descripcion = COALESCE($3, descripcion),
-           activa = COALESCE($4, activa)
-       WHERE id_instalacion = $5
-       RETURNING id_instalacion, nombre, tipo, descripcion, activa`,
-      [nombreVal, tipoVal, descripcionVal, activaVal, idInstalacion]
+           activa = COALESCE($4, activa),
+           carrera = CASE WHEN $6::boolean THEN $5::varchar ELSE carrera END
+       WHERE id_instalacion = $7
+       RETURNING id_instalacion, nombre, tipo, descripcion, carrera, activa`,
+      [nombreVal, tipoVal, descripcionVal, activaVal, carreraVal, actualizarCarrera, idInstalacion]
     );
     if (rows.length === 0) {
       res.status(404).json({ mensaje: 'La instalación no existe.' });
