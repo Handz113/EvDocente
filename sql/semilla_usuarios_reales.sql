@@ -373,16 +373,16 @@ ON CONFLICT (crn) DO NOTHING;
 -- ============================================================================
 -- 7. 8 INSTALACIONES ACTIVAS (TALLERES Y LABORATORIOS) + PREGUNTAS ESPECÍFICAS
 -- ============================================================================
-INSERT INTO Instalacion (nombre, tipo, descripcion, activa)
+INSERT INTO Instalacion (nombre, tipo, descripcion, carrera, activa)
 VALUES
-    ('Laboratorio de Desarrollo de Software',       'Centro de Cómputo',  'Estaciones de alto rendimiento con entornos de desarrollo, bases de datos y pruebas automatizadas.', TRUE),
-    ('Laboratorio de Redes y Ciberseguridad',       'Laboratorio',        'Switches administrables, servidores virtuales y estaciones para prácticas de redes y seguridad.',     TRUE),
-    ('Taller de Manufactura y CNC',                 'Taller',             'Tornos CNC, fresadoras y bancos de metrología para prácticas de Ingeniería Industrial.',              TRUE),
-    ('Laboratorio de Control de Calidad y Ergonomía','Laboratorio',       'Instrumentos de medición estadística, cronómetros industriales y estaciones de estudio de tiempos.',   TRUE),
-    ('Taller de Simulación Empresarial y Finanzas', 'Aula Especializada', 'Software ERP, terminales de análisis financiero y salas para simulación de negocios.',                TRUE),
-    ('Cocina Caliente Profesional',                 'Taller de Cocina',   'Estufas industriales, hornos de convección, freidoras y estaciones individuales de acero inoxidable.', TRUE),
-    ('Taller de Panadería y Repostería',            'Taller de Cocina',   'Hornos de piso, amasadoras industriales, cámara de fermentación y mesas de mármol para pastelería.',   TRUE),
-    ('Laboratorio de Electrónica y Robótica',       'Laboratorio',        'Osciloscopios, fuentes reguladas, impresoras 3D y kits de microcontroladores para prototipado.',      TRUE)
+    ('Laboratorio de Desarrollo de Software',       'Centro de Cómputo',  'Estaciones de alto rendimiento con entornos de desarrollo, bases de datos y pruebas automatizadas.', 'Ingeniería en Sistemas', TRUE),
+    ('Laboratorio de Redes y Ciberseguridad',       'Laboratorio',        'Switches administrables, servidores virtuales y estaciones para prácticas de redes y seguridad.',     'Ingeniería en Sistemas', TRUE),
+    ('Taller de Manufactura y CNC',                 'Taller',             'Tornos CNC, fresadoras y bancos de metrología para prácticas de Ingeniería Industrial.',              'Ingeniería Industrial',  TRUE),
+    ('Laboratorio de Control de Calidad y Ergonomía','Laboratorio',       'Instrumentos de medición estadística, cronómetros industriales y estaciones de estudio de tiempos.',   'Ingeniería Industrial',  TRUE),
+    ('Taller de Simulación Empresarial y Finanzas', 'Aula Especializada', 'Software ERP, terminales de análisis financiero y salas para simulación de negocios.',                'Administración',         TRUE),
+    ('Cocina Caliente Profesional',                 'Taller de Cocina',   'Estufas industriales, hornos de convección, freidoras y estaciones individuales de acero inoxidable.', 'Cocina',                 TRUE),
+    ('Taller de Panadería y Repostería',            'Taller de Cocina',   'Hornos de piso, amasadoras industriales, cámara de fermentación y mesas de mármol para pastelería.',   'Cocina',                 TRUE),
+    ('Laboratorio de Electrónica y Robótica',       'Laboratorio',        'Osciloscopios, fuentes reguladas, impresoras 3D y kits de microcontroladores para prototipado.',      'Ingeniería en Sistemas', TRUE)
 ON CONFLICT (nombre) DO NOTHING;
 
 -- Defensa: si no existieran preguntas generales de instalaciones, inserta las 6 estándar

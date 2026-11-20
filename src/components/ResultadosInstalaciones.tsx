@@ -737,10 +737,21 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                 <tr key={f.id} className="hover:bg-[#f4f6fb]/60 dark:hover:bg-slate-800/60 transition-colors">
                   <td className="py-3 px-3">
                     <span className="font-medium text-[#1c2333] dark:text-slate-100">{f.nombre}</span>
-                    <span className="block text-[11px] text-[#5d6678] dark:text-slate-400">
-                      {f.tipo}
-                      {!f.activa && ' · Inactiva'}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                      <span className="text-[11px] text-[#5d6678] dark:text-slate-400">
+                        {f.tipo}
+                        {!f.activa && ' · Inactiva'}
+                      </span>
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          f.carrera
+                            ? 'bg-[#e3f4f2] text-[#0f766e] dark:bg-teal-500/15 dark:text-teal-300'
+                            : 'bg-[#f4f6fb] text-[#5d6678] dark:bg-slate-800 dark:text-slate-300'
+                        }`}
+                      >
+                        {f.carrera || 'General'}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-3 px-3 text-[#5d6678] dark:text-slate-400">{f.totalEvaluaciones}</td>
                   <td className="py-3 px-3">
@@ -785,7 +796,18 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
         <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-md mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">{detalle.nombre}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">{detalle.nombre}</h2>
+                <span
+                  className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                    detalle.carrera
+                      ? 'bg-[#e3f4f2] text-[#0f766e] dark:bg-teal-500/15 dark:text-teal-300'
+                      : 'bg-[#f4f6fb] text-[#5d6678] dark:bg-slate-800 dark:text-slate-300'
+                  }`}
+                >
+                  {detalle.carrera || 'General'}
+                </span>
+              </div>
               <p className="text-xs text-[#5d6678] dark:text-slate-400">
                 {detalle.tipo} · {detalle.totalEvaluaciones} evaluaciones
               </p>

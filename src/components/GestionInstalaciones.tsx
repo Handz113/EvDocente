@@ -21,7 +21,7 @@ const claseBotonPrimario =
 const claseBotonSecundario =
   'px-2.5 py-1 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-xs font-semibold text-[#5d6678] dark:text-slate-300 hover:bg-[#f4f6fb] dark:hover:bg-slate-800 cursor-pointer'
 
-const INSTALACION_VACIA = { nombre: '', tipo: '', descripcion: '' }
+const INSTALACION_VACIA = { nombre: '', tipo: '', descripcion: '', carrera: '' }
 const PREGUNTA_VACIA: { idInstalacion: string; dimension: Dimension; texto: string } = {
   idInstalacion: '',
   dimension: 'Equipamiento',
@@ -44,6 +44,7 @@ export default function GestionInstalaciones() {
 
   const [instalaciones, setInstalaciones] = useState<Instalacion[]>([])
   const [preguntas, setPreguntas] = useState<PreguntaInstalacion[]>([])
+  const [carrerasDisponibles, setCarrerasDisponibles] = useState<string[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
@@ -73,6 +74,7 @@ export default function GestionInstalaciones() {
       .then((data) => {
         setInstalaciones(data.instalaciones)
         setPreguntas(data.preguntas)
+        setCarrerasDisponibles(data.carrerasDisponibles ?? [])
       })
       .catch(manejarError)
       .finally(() => setCargando(false))
@@ -108,6 +110,7 @@ export default function GestionInstalaciones() {
       nombre: formInst.nombre.trim(),
       tipo: formInst.tipo.trim(),
       descripcion: formInst.descripcion.trim(),
+      carrera: formInst.carrera.trim() ? formInst.carrera.trim() : null,
     }
     ejecutar(
       () =>
@@ -119,7 +122,12 @@ export default function GestionInstalaciones() {
   }
 
   const editarInstalacion = (i: Instalacion) => {
-    setFormInst({ nombre: i.nombre, tipo: i.tipo, descripcion: i.descripcion || '' })
+    setFormInst({
+      nombre: i.nombre,
+      tipo: i.tipo,
+      descripcion: i.descripcion || '',
+      carrera: i.carrera || '',
+    })
     setEditInstId(i.id)
     setAbiertoInst(true)
   }
@@ -207,7 +215,7 @@ export default function GestionInstalaciones() {
 
         {abiertoInst && (
           <form onSubmit={guardarInstalacion} className="p-4 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800/70 mb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Nombre</label>
                 <input
@@ -226,6 +234,26 @@ export default function GestionInstalaciones() {
                   onChange={(e) => setFormInst({ ...formInst, tipo: e.target.value })}
                   className={claseInput}
                 />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Carrera</label>
+                <select
+                  aria-label="Carrera asignada a la instalación"
+                  value={formInst.carrera}
+                  onChange={(e) => setFormInst({ ...formInst, carrera: e.target.value })}
+                  className={claseInput}
+                >
+                  <option value="">Todas las carreras (General)</option>
+                  {formInst.carrera &&
+                    !carrerasDisponibles.includes(formInst.carrera) && (
+                      <option value={formInst.carrera}>{formInst.carrera}</option>
+                    )}
+                  {carrerasDisponibles.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Descripción (opcional)</label>
@@ -250,6 +278,7 @@ export default function GestionInstalaciones() {
               <tr className="border-b border-[#e2e6ef] dark:border-slate-800 text-[#5d6678] dark:text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-3 font-semibold">Nombre</th>
                 <th className="py-3 px-3 font-semibold">Tipo</th>
+                <th className="py-3 px-3 font-semibold">Carrera</th>
                 <th className="py-3 px-3 font-semibold">Descripción</th>
                 <th className="py-3 px-3 font-semibold">Estado</th>
                 <th className="py-3 px-3 font-semibold text-right">Acciones</th>
@@ -260,6 +289,17 @@ export default function GestionInstalaciones() {
                 <tr key={i.id} className="hover:bg-[#f4f6fb]/50 dark:hover:bg-slate-800/60 transition-colors">
                   <td className="py-3 px-3 font-medium text-[#1c2333] dark:text-slate-100">{i.nombre}</td>
                   <td className="py-3 px-3 text-[#1c2333] dark:text-slate-200">{i.tipo}</td>
+                  <td className="py-3 px-3">
+                    <span
+                      className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                        i.carrera
+                          ? 'bg-[#e3f4f2] text-[#0f766e] dark:bg-teal-500/15 dark:text-teal-300'
+                          : 'bg-[#f4f6fb] text-[#5d6678] dark:bg-slate-800 dark:text-slate-300'
+                      }`}
+                    >
+                      {i.carrera || 'General'}
+                    </span>
+                  </td>
                   <td className="py-3 px-3 text-[#5d6678] dark:text-slate-400">{i.descripcion}</td>
                   <td className="py-3 px-3">
                     <Estado activa={i.activa} />
@@ -280,7 +320,7 @@ export default function GestionInstalaciones() {
               ))}
               {(cargando || instalaciones.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[#5d6678] dark:text-slate-400">
+                  <td colSpan={6} className="py-8 text-center text-[#5d6678] dark:text-slate-400">
                     {cargando ? 'Cargando...' : 'No hay instalaciones registradas.'}
                   </td>
                 </tr>

@@ -56,15 +56,26 @@ export default function TalleresAlumno() {
             className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
           >
             <div>
-              <span
-                className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-3 ${
-                  i.evaluada
-                    ? 'bg-[#e7f6ec] text-[#15803d] dark:bg-emerald-500/15 dark:text-emerald-300'
-                    : 'bg-[#fff4e5] text-[#d97706] dark:bg-amber-500/15 dark:text-amber-300'
-                }`}
-              >
-                {i.evaluada ? '✓ Evaluada' : 'Pendiente'}
-              </span>
+              <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                <span
+                  className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                    i.evaluada
+                      ? 'bg-[#e7f6ec] text-[#15803d] dark:bg-emerald-500/15 dark:text-emerald-300'
+                      : 'bg-[#fff4e5] text-[#d97706] dark:bg-amber-500/15 dark:text-amber-300'
+                  }`}
+                >
+                  {i.evaluada ? '✓ Evaluada' : 'Pendiente'}
+                </span>
+                <span
+                  className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                    i.carrera
+                      ? 'bg-[#e8eefc] text-[#2557d6] dark:bg-blue-500/15 dark:text-blue-300'
+                      : 'bg-[#f4f6fb] text-[#5d6678] dark:bg-slate-800 dark:text-slate-300'
+                  }`}
+                >
+                  {i.carrera || 'General'}
+                </span>
+              </div>
               <h3 className="text-base font-bold text-[#1c2333] dark:text-slate-100 mb-1">{i.nombre}</h3>
               <p className="text-xs text-[#5d6678] dark:text-slate-400 mb-2 font-mono">{i.tipo}</p>
               {i.descripcion && <p className="text-sm text-[#5d6678] dark:text-slate-400 mb-5">{i.descripcion}</p>}
