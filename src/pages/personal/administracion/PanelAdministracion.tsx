@@ -367,7 +367,7 @@ export default function PanelAdministracion() {
 
   const botonEditar = (onClick: () => void) => (
     <button
-      className="px-2.5 py-1 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#5d6678] hover:bg-[#f4f6fb] cursor-pointer"
+      className="px-2.5 py-1 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-xs font-semibold text-[#5d6678] dark:text-slate-300 hover:bg-[#f4f6fb] dark:hover:bg-slate-800 cursor-pointer"
       onClick={onClick}
     >
       Editar
@@ -389,13 +389,13 @@ export default function PanelAdministracion() {
       }}
     >
       {errorApi && (
-        <div className="mb-4 rounded-xl bg-[#fee2e2] border border-[#fecaca] px-4 py-3 text-xs font-semibold text-[#dc2626]">
+        <div className="mb-4 rounded-xl bg-[#fee2e2] dark:bg-red-950/50 border border-[#fecaca] dark:border-red-800/60 px-4 py-3 text-xs font-semibold text-[#dc2626] dark:text-red-300">
           {errorApi}
         </div>
       )}
 
       {mensajeInfo && (
-        <div className="mb-4 rounded-xl bg-[#e3f4f2] border border-[#99f6e4] px-4 py-3 text-xs font-semibold text-[#0f766e]">
+        <div className="mb-4 rounded-xl bg-[#e3f4f2] dark:bg-teal-950/50 border border-[#99f6e4] dark:border-teal-800/60 px-4 py-3 text-xs font-semibold text-[#0f766e] dark:text-teal-300">
           {mensajeInfo}
         </div>
       )}
@@ -411,7 +411,7 @@ export default function PanelAdministracion() {
               nombre: 'Perfil / Rol',
               opciones: ['Docente', 'Coordinador', 'Administrador', 'Alumno'],
               mostrar: (v) => (
-                <span className="px-2.5 py-0.5 rounded-full bg-[#e3f4f2] text-[#0f766e] text-xs font-semibold">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#e3f4f2] dark:bg-teal-500/15 text-[#0f766e] dark:text-teal-300 text-xs font-semibold">
                   {String(v || 'Usuario')}
                 </span>
               ),
@@ -429,7 +429,7 @@ export default function PanelAdministracion() {
               mostrar: (v) => (
                 <span
                   className={`font-semibold text-xs ${
-                    v ? 'text-[#15803d]' : 'text-[#dc2626]'
+                    v ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#dc2626] dark:text-red-400'
                   }`}
                 >
                   {v ? 'Activo' : 'Inactivo'}
@@ -489,10 +489,10 @@ export default function PanelAdministracion() {
                     ? 'Violación de seguridad: No se puede desactivar la cuenta del administrador principal del sistema.'
                     : undefined
                 }
-                className={`px-2.5 py-1 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#5d6678] ${
+                className={`px-2.5 py-1 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-xs font-semibold text-[#5d6678] dark:text-slate-300 ${
                   esAdminPrincipal
                     ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-[#f4f6fb] cursor-pointer'
+                    : 'hover:bg-[#f4f6fb] dark:hover:bg-slate-800 cursor-pointer'
                 }`}
                 onClick={() => handleToggleUsuario(f)}
               >
@@ -521,7 +521,7 @@ export default function PanelAdministracion() {
               mostrar: (v) => (
                 <span
                   className={`font-semibold text-xs ${
-                    v ? 'text-[#15803d]' : 'text-[#dc2626]'
+                    v ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#dc2626] dark:text-red-400'
                   }`}
                 >
                   {v ? 'Activo' : 'Inactivo'}
@@ -607,11 +607,11 @@ export default function PanelAdministracion() {
               soloLectura: true,
               mostrar: (v) =>
                 v ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#e7f6ec] text-[#15803d] text-xs font-semibold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#e7f6ec] dark:bg-emerald-500/15 text-[#15803d] dark:text-emerald-300 text-xs font-semibold">
                     Activo
                   </span>
                 ) : (
-                  <span className="text-[#5d6678] text-xs">Cerrado</span>
+                  <span className="text-[#5d6678] dark:text-slate-400 text-xs">Cerrado</span>
                 ),
             },
           ]}
@@ -651,7 +651,7 @@ export default function PanelAdministracion() {
               })}
               {!f.activo && (
                 <button
-                  className="px-2.5 py-1 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#0f766e] hover:bg-[#e3f4f2] cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-xs font-semibold text-[#0f766e] dark:text-teal-400 hover:bg-[#e3f4f2] dark:hover:bg-teal-950/60 cursor-pointer"
                   onClick={() => handleHabilitarPeriodo(f.id_ciclo)}
                 >
                   Habilitar
@@ -775,14 +775,14 @@ function Catalogo<T extends Record<string, any>>({
   }
 
   return (
-    <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
+    <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-8">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-lg font-bold text-[#1c2333]">{titulo}</h2>
+          <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">{titulo}</h2>
           {colapsable && filtrados.length > 0 && (
-            <p className="text-xs text-[#5d6678] mt-0.5">
-              Mostrando <strong className="text-[#1c2333]">{visibles.length}</strong> de{' '}
-              <strong className="text-[#1c2333]">{filtrados.length}</strong> registros
+            <p className="text-xs text-[#5d6678] dark:text-slate-400 mt-0.5">
+              Mostrando <strong className="text-[#1c2333] dark:text-slate-200">{visibles.length}</strong> de{' '}
+              <strong className="text-[#1c2333] dark:text-slate-200">{filtrados.length}</strong> registros
             </p>
           )}
         </div>
@@ -796,7 +796,7 @@ function Catalogo<T extends Record<string, any>>({
               onChange={(e) => setBusqueda(e.target.value)}
               className={`w-full px-3.5 py-2 ${
                 busqueda ? 'pr-8' : ''
-              } rounded-xl border border-[#e2e6ef] bg-white text-xs text-[#1c2333] placeholder:text-[#5d6678]/70 focus:border-[#0f766e] focus:outline-none`}
+              } rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-[#1c2333] dark:text-slate-100 placeholder:text-[#5d6678]/70 dark:placeholder:text-slate-500 focus:border-[#0f766e] dark:focus:border-teal-500 focus:outline-none`}
             />
             {busqueda && (
               <button
@@ -804,7 +804,7 @@ function Catalogo<T extends Record<string, any>>({
                 onClick={() => setBusqueda('')}
                 aria-label="Limpiar búsqueda"
                 title="Limpiar búsqueda"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] hover:text-[#1c2333] hover:bg-[#f4f6fb] text-xs font-bold cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-100 hover:bg-[#f4f6fb] dark:hover:bg-slate-700 text-xs font-bold cursor-pointer"
               >
                 ×
               </button>
@@ -814,7 +814,7 @@ function Catalogo<T extends Record<string, any>>({
             <button
               type="button"
               onClick={onToggleMostrarTodos}
-              className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 bg-[#e3f4f2] hover:bg-[#0f766e] text-[#0f766e] hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+              className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 dark:border-teal-500/40 bg-[#e3f4f2] dark:bg-teal-500/15 hover:bg-[#0f766e] dark:hover:bg-teal-600 text-[#0f766e] dark:text-teal-300 hover:text-white dark:hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
             >
               {mostrarTodos
                 ? `Mostrar menos (${limiteColapsado})`
@@ -827,24 +827,24 @@ function Catalogo<T extends Record<string, any>>({
               setAbierto(!abierto)
               setError('')
             }}
-            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap cursor-pointer"
           >
             {abierto ? 'Cancelar' : '+ Agregar'}
           </button>
         </div>
       </div>
 
-      {nota && <p className="text-xs text-[#5d6678] mb-4">{nota}</p>}
+      {nota && <p className="text-xs text-[#5d6678] dark:text-slate-400 mb-4">{nota}</p>}
 
       {abierto && (
         <form
           onSubmit={guardar}
-          className="p-4 rounded-xl border border-[#e2e6ef] bg-[#f4f6fb] mb-6"
+          className="p-4 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800/70 mb-6"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {editables.map((c) => (
               <div key={c.id} className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-[#1c2333]">
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">
                   {c.nombre}
                 </label>
                 {c.opciones ? (
@@ -853,7 +853,7 @@ function Catalogo<T extends Record<string, any>>({
                     onChange={(e) =>
                       setNuevo({ ...nuevo, [c.id]: e.target.value })
                     }
-                    className="px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs"
+                    className="px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500"
                   >
                     {c.opciones.map((o) => (
                       <option key={o} value={o}>
@@ -868,19 +868,19 @@ function Catalogo<T extends Record<string, any>>({
                     onChange={(e) =>
                       setNuevo({ ...nuevo, [c.id]: e.target.value })
                     }
-                    className="px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs"
+                    className="px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-[#1c2333] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-[#0f766e] dark:focus:border-teal-500"
                   />
                 )}
               </div>
             ))}
           </div>
 
-          {error && <p className="text-xs text-[#dc2626] font-semibold mt-3">{error}</p>}
+          {error && <p className="text-xs text-[#dc2626] dark:text-red-400 font-semibold mt-3">{error}</p>}
 
           <div className="mt-4 flex justify-end">
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white text-xs font-semibold shadow-xs cursor-pointer"
+              className="px-5 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-semibold shadow-xs cursor-pointer"
             >
               Guardar Registro
             </button>
@@ -893,7 +893,7 @@ function Catalogo<T extends Record<string, any>>({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="border-b border-[#e2e6ef] text-[#5d6678] uppercase tracking-wider">
+            <tr className="border-b border-[#e2e6ef] dark:border-slate-800 text-[#5d6678] dark:text-slate-400 uppercase tracking-wider">
               {columnasTabla.map((c) => (
                 <th key={c.id} className="py-3 px-3 font-semibold">
                   {c.nombre}
@@ -902,11 +902,11 @@ function Catalogo<T extends Record<string, any>>({
               <th className="py-3 px-3 text-right font-semibold">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e2e6ef]">
+          <tbody className="divide-y divide-[#e2e6ef] dark:divide-slate-800">
             {visibles.map((f) => (
-              <tr key={String(f[clave])} className="hover:bg-[#f4f6fb]/50 transition-colors">
+              <tr key={String(f[clave])} className="hover:bg-[#f4f6fb]/50 dark:hover:bg-slate-800/60 transition-colors">
                 {columnasTabla.map((c) => (
-                  <td key={c.id} className="py-3 px-3 text-[#1c2333]">
+                  <td key={c.id} className="py-3 px-3 text-[#1c2333] dark:text-slate-200">
                     {c.mostrar ? c.mostrar(f[c.id]) : String(f[c.id] ?? '')}
                   </td>
                 ))}
@@ -918,7 +918,7 @@ function Catalogo<T extends Record<string, any>>({
                         window.confirm('¿Confirmas eliminar este registro?') &&
                         onEliminar(f)
                       }
-                      className="px-2.5 py-1 rounded-lg border border-[#fee2e2] text-xs font-semibold text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg border border-[#fee2e2] dark:border-red-900/60 text-xs font-semibold text-[#dc2626] dark:text-red-400 hover:bg-[#fee2e2] dark:hover:bg-red-950/60 cursor-pointer"
                     >
                       Eliminar
                     </button>
@@ -930,7 +930,7 @@ function Catalogo<T extends Record<string, any>>({
               <tr>
                 <td
                   colSpan={columnasTabla.length + 1}
-                  className="py-8 text-center text-[#5d6678]"
+                  className="py-8 text-center text-[#5d6678] dark:text-slate-400"
                 >
                   No se encontraron registros.
                 </td>
@@ -989,12 +989,12 @@ function FormularioEdicion({
   }
 
   return (
-    <form onSubmit={enviar} className="p-4 rounded-xl border border-[#e2e6ef] bg-[#f4f6fb] mb-6">
-      <h3 className="text-sm font-bold text-[#1c2333] mb-3">{titulo}</h3>
+    <form onSubmit={enviar} className="p-4 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800/70 mb-6">
+      <h3 className="text-sm font-bold text-[#1c2333] dark:text-slate-100 mb-3">{titulo}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         {campos.map((c) => (
           <div key={c.id} className="flex flex-col gap-1">
-            <label htmlFor={`editar-${c.id}`} className="text-[11px] font-semibold text-[#1c2333]">
+            <label htmlFor={`editar-${c.id}`} className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">
               {c.etiqueta}
             </label>
             <input
@@ -1004,29 +1004,29 @@ function FormularioEdicion({
               disabled={c.bloqueado}
               autoComplete={c.tipo === 'password' ? 'new-password' : undefined}
               onChange={(e) => setValores({ ...valores, [c.id]: e.target.value })}
-              className={`px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs ${
+              className={`px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500 ${
                 c.bloqueado ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             />
-            {c.ayuda && <p className="text-[11px] text-[#5d6678]">{c.ayuda}</p>}
+            {c.ayuda && <p className="text-[11px] text-[#5d6678] dark:text-slate-400">{c.ayuda}</p>}
           </div>
         ))}
       </div>
 
-      {error && <p className="text-xs text-[#dc2626] font-semibold mt-3">{error}</p>}
+      {error && <p className="text-xs text-[#dc2626] dark:text-red-400 font-semibold mt-3">{error}</p>}
 
       <div className="mt-4 flex justify-end gap-2">
         <button
           type="button"
           onClick={onCancelar}
-          className="px-5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-[#5d6678] text-xs font-semibold hover:bg-[#f4f6fb] cursor-pointer"
+          className="px-5 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-900 text-[#5d6678] dark:text-slate-300 text-xs font-semibold hover:bg-[#f4f6fb] dark:hover:bg-slate-800 cursor-pointer"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={guardando}
-          className="px-5 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          className="px-5 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {guardando ? 'Guardando...' : 'Guardar cambios'}
         </button>

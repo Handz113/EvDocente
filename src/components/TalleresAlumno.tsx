@@ -31,41 +31,43 @@ export default function TalleresAlumno() {
 
   return (
     <section className="mt-10">
-      <h2 className="text-xl font-bold text-[#1c2333] mb-1">Talleres y laboratorios</h2>
-      <p className="text-sm text-[#5d6678] mb-4">
+      <h2 className="text-xl font-bold text-[#1c2333] dark:text-slate-100 mb-1">Talleres y laboratorios</h2>
+      <p className="text-sm text-[#5d6678] dark:text-slate-400 mb-4">
         Evalúa el equipamiento, la disponibilidad y la limpieza de las instalaciones que usas.{' '}
         {instalaciones.length > 0 && (
-          <span className="font-medium">
+          <span className="font-medium text-[#1c2333] dark:text-slate-200">
             {hechas} de {instalaciones.length} evaluadas.
           </span>
         )}
       </p>
 
-      {cargando && <p className="text-sm text-[#5d6678]">Cargando instalaciones...</p>}
+      {cargando && <p className="text-sm text-[#5d6678] dark:text-slate-400">Cargando instalaciones...</p>}
       {error && (
-        <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mb-4">{error}</p>
+        <p className="text-sm text-[#dc2626] dark:text-red-300 font-medium bg-[#fee2e2] dark:bg-red-950/50 border border-transparent dark:border-red-800/60 rounded-xl p-3 mb-4">{error}</p>
       )}
       {!cargando && !error && instalaciones.length === 0 && (
-        <p className="text-sm text-[#5d6678]">No hay talleres ni laboratorios por evaluar.</p>
+        <p className="text-sm text-[#5d6678] dark:text-slate-400">No hay talleres ni laboratorios por evaluar.</p>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {instalaciones.map((i) => (
           <article
             key={i.id}
-            className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
           >
             <div>
               <span
                 className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-3 ${
-                  i.evaluada ? 'bg-[#e7f6ec] text-[#15803d]' : 'bg-[#fff4e5] text-[#d97706]'
+                  i.evaluada
+                    ? 'bg-[#e7f6ec] text-[#15803d] dark:bg-emerald-500/15 dark:text-emerald-300'
+                    : 'bg-[#fff4e5] text-[#d97706] dark:bg-amber-500/15 dark:text-amber-300'
                 }`}
               >
                 {i.evaluada ? '✓ Evaluada' : 'Pendiente'}
               </span>
-              <h3 className="text-base font-bold text-[#1c2333] mb-1">{i.nombre}</h3>
-              <p className="text-xs text-[#5d6678] mb-2 font-mono">{i.tipo}</p>
-              {i.descripcion && <p className="text-sm text-[#5d6678] mb-5">{i.descripcion}</p>}
+              <h3 className="text-base font-bold text-[#1c2333] dark:text-slate-100 mb-1">{i.nombre}</h3>
+              <p className="text-xs text-[#5d6678] dark:text-slate-400 mb-2 font-mono">{i.tipo}</p>
+              {i.descripcion && <p className="text-sm text-[#5d6678] dark:text-slate-400 mb-5">{i.descripcion}</p>}
             </div>
 
             <button
@@ -73,8 +75,8 @@ export default function TalleresAlumno() {
               onClick={() => navigate(`/alumno/instalacion/${i.id}`)}
               className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-all ${
                 i.evaluada
-                  ? 'bg-[#e2e6ef] text-[#5d6678] cursor-not-allowed opacity-60'
-                  : 'bg-[#2557d6] text-white hover:bg-[#1f47b2] shadow-sm cursor-pointer'
+                  ? 'bg-[#e2e6ef] text-[#5d6678] dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed opacity-70'
+                  : 'bg-[#2557d6] dark:bg-blue-600 text-white hover:bg-[#1f47b2] dark:hover:bg-blue-500 shadow-sm cursor-pointer'
               }`}
             >
               {i.evaluada ? 'Ya evaluada' : 'Evaluar instalación'}

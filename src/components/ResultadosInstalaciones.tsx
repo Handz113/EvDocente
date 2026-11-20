@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import Barra from './Barra'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { useNavigate } from '../router'
 import { ErrorAPI } from '../services/evaluacionService'
 import {
@@ -52,20 +53,20 @@ function acortarEtiqueta(texto: string, max = 16): string {
   return texto.length > max ? `${texto.slice(0, max - 1)}…` : texto
 }
 
-function colorBarraIndice(item: DatoIndiceInstalacion): string {
-  if (item.tipo === 'general') return '#0f766e'
-  if (item.evaluaciones === 0 && item.promedio === 0) return '#cbd5e1'
-  if (item.promedio >= 8.5) return '#0d9488'
-  if (item.promedio >= 7.0) return '#14b8a6'
-  return '#dc2626'
+function colorBarraIndice(item: DatoIndiceInstalacion, isDark = false): string {
+  if (item.tipo === 'general') return isDark ? '#10b981' : '#0f766e'
+  if (item.evaluaciones === 0 && item.promedio === 0) return isDark ? '#475569' : '#cbd5e1'
+  if (item.promedio >= 8.5) return isDark ? '#14b8a6' : '#0d9488'
+  if (item.promedio >= 7.0) return isDark ? '#2dd4bf' : '#14b8a6'
+  return isDark ? '#ef4444' : '#dc2626'
 }
 
-function colorBarraParticipacionInst(evaluaciones: number, maximo: number): string {
-  if (evaluaciones === 0) return '#cbd5e1'
+function colorBarraParticipacionInst(evaluaciones: number, maximo: number, isDark = false): string {
+  if (evaluaciones === 0) return isDark ? '#475569' : '#cbd5e1'
   const ratio = maximo > 0 ? evaluaciones / maximo : 0
-  if (ratio >= 0.75) return '#0f766e'
-  if (ratio >= 0.4) return '#0d9488'
-  return '#14b8a6'
+  if (ratio >= 0.75) return isDark ? '#10b981' : '#0f766e'
+  if (ratio >= 0.4) return isDark ? '#14b8a6' : '#0d9488'
+  return isDark ? '#2dd4bf' : '#14b8a6'
 }
 
 function TooltipIndiceInstalacion({ active, payload }: TooltipContentProps) {
@@ -85,27 +86,27 @@ function TooltipIndiceInstalacion({ active, payload }: TooltipContentProps) {
     : 'No Suficiente'
 
   const estadoClase = sinDatos
-    ? 'bg-[#f4f6fb] text-[#5d6678]'
+    ? 'bg-[#f4f6fb] text-[#5d6678] dark:bg-slate-800 dark:text-slate-400'
     : item.promedio >= 7.0
-    ? 'bg-[#e3f4f2] text-[#0f766e]'
-    : 'bg-[#fee2e2] text-[#dc2626]'
+    ? 'bg-[#e3f4f2] text-[#0f766e] dark:bg-teal-500/15 dark:text-teal-300'
+    : 'bg-[#fee2e2] text-[#dc2626] dark:bg-red-500/15 dark:text-red-300'
 
   return (
-    <div className="bg-white border border-[#e2e6ef] rounded-xl p-3 shadow-md max-w-xs text-xs">
+    <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-700 rounded-xl p-3 shadow-md max-w-xs text-xs">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <span className="font-bold text-[#1c2333] leading-snug">{item.nombre}</span>
+        <span className="font-bold text-[#1c2333] dark:text-slate-100 leading-snug">{item.nombre}</span>
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${estadoClase}`}>
           {estadoTexto}
         </span>
       </div>
-      {item.subtitulo && <p className="text-[11px] text-[#5d6678] mb-1.5">{item.subtitulo}</p>}
-      <div className="flex items-center justify-between gap-4 pt-1.5 border-t border-[#e2e6ef]">
-        <span className="text-[#5d6678]">Índice promedio:</span>
-        <strong className="text-sm font-extrabold text-[#0f766e]">{item.promedio.toFixed(2)} / 10</strong>
+      {item.subtitulo && <p className="text-[11px] text-[#5d6678] dark:text-slate-400 mb-1.5">{item.subtitulo}</p>}
+      <div className="flex items-center justify-between gap-4 pt-1.5 border-t border-[#e2e6ef] dark:border-slate-800">
+        <span className="text-[#5d6678] dark:text-slate-400">Índice promedio:</span>
+        <strong className="text-sm font-extrabold text-[#0f766e] dark:text-teal-400">{item.promedio.toFixed(2)} / 10</strong>
       </div>
       <div className="flex items-center justify-between gap-4 mt-0.5">
-        <span className="text-[#5d6678]">Evaluaciones:</span>
-        <span className="font-semibold text-[#1c2333]">{item.evaluaciones}</span>
+        <span className="text-[#5d6678] dark:text-slate-400">Evaluaciones:</span>
+        <span className="font-semibold text-[#1c2333] dark:text-slate-100">{item.evaluaciones}</span>
       </div>
     </div>
   )
@@ -117,22 +118,22 @@ function TooltipParticipacionInstalacion({ active, payload }: TooltipContentProp
   if (!item) return null
 
   return (
-    <div className="bg-white border border-[#e2e6ef] rounded-xl p-3 shadow-md max-w-xs text-xs">
+    <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-700 rounded-xl p-3 shadow-md max-w-xs text-xs">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <span className="font-bold text-[#1c2333] leading-snug">{item.nombre}</span>
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#e3f4f2] text-[#0f766e] shrink-0">
+        <span className="font-bold text-[#1c2333] dark:text-slate-100 leading-snug">{item.nombre}</span>
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#e3f4f2] dark:bg-teal-500/15 text-[#0f766e] dark:text-teal-300 shrink-0">
           {item.porcentajeTotal.toFixed(1)}% del total
         </span>
       </div>
-      {item.subtitulo && <p className="text-[11px] text-[#5d6678] mb-1.5">{item.subtitulo}</p>}
-      <div className="space-y-0.5 pt-1.5 border-t border-[#e2e6ef]">
+      {item.subtitulo && <p className="text-[11px] text-[#5d6678] dark:text-slate-400 mb-1.5">{item.subtitulo}</p>}
+      <div className="space-y-0.5 pt-1.5 border-t border-[#e2e6ef] dark:border-slate-800">
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[#5d6678]">Encuestas contestadas:</span>
-          <strong className="text-sm font-extrabold text-[#0f766e]">{item.evaluaciones}</strong>
+          <span className="text-[#5d6678] dark:text-slate-400">Encuestas contestadas:</span>
+          <strong className="text-sm font-extrabold text-[#0f766e] dark:text-teal-400">{item.evaluaciones}</strong>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[#5d6678]">Índice promedio:</span>
-          <span className="font-semibold text-[#1c2333]">
+          <span className="text-[#5d6678] dark:text-slate-400">Índice promedio:</span>
+          <span className="font-semibold text-[#1c2333] dark:text-slate-100">
             {item.promedio !== null ? `${item.promedio.toFixed(2)} / 10` : 'Sin evaluaciones'}
           </span>
         </div>
@@ -144,6 +145,7 @@ function TooltipParticipacionInstalacion({ active, payload }: TooltipContentProp
 /** Resultados anónimos de talleres y laboratorios del ciclo activo. */
 export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
   const { usuario, cerrarSesion } = useAuth()
+  const { isDark } = useTheme()
   const navigate = useNavigate()
   const [ciclo, setCiclo] = useState<CicloAPI | null>(null)
   const [filas, setFilas] = useState<ResultadoInstalacion[]>([])
@@ -354,38 +356,38 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
     <>
       {/* KPIs de Talleres y Laboratorios */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#0f766e]">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#0f766e] dark:text-teal-400">
             {kpisTalleres.promedioGeneral !== null ? kpisTalleres.promedioGeneral.toFixed(1) : 'S/E'}
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">
             Índice General de Talleres (0 - 10)
           </div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#0f766e]">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#0f766e] dark:text-teal-400">
             {cargando ? '...' : kpisTalleres.totalEvaluaciones}
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">
             Evaluaciones de Talleres Recibidas
           </div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#0f766e]">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#0f766e] dark:text-teal-400">
             {kpisTalleres.instalacionesEvaluadas} / {kpisTalleres.totalInstalaciones}
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">
             Instalaciones con Respuestas
           </div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#15803d]">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#15803d] dark:text-emerald-400">
             {kpisTalleres.coberturaPct.toFixed(0)}%
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">
             Cobertura del Catálogo Evaluado
           </div>
         </div>
@@ -394,13 +396,13 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
       {/* Gráficas de Índice y Participación de Talleres y Laboratorios */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Gráfica 1: Índice de Talleres / Dimensiones */}
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 sm:p-6 shadow-xs min-w-0 flex flex-col">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs min-w-0 flex flex-col">
           <div className="flex flex-col gap-3 mb-4">
             <div>
-              <h3 className="text-base font-bold text-[#1c2333]">
+              <h3 className="text-base font-bold text-[#1c2333] dark:text-slate-100">
                 Índice de Satisfacción — Talleres y Laboratorios
               </h3>
-              <p className="text-xs text-[#5d6678]">
+              <p className="text-xs text-[#5d6678] dark:text-slate-400">
                 {instalacionIndiceId === 'todas'
                   ? 'Comparativa del índice general frente a cada instalación (escala 0 - 10).'
                   : 'Desglose por dimensiones (Equipamiento, Disponibilidad, Limpieza) de la instalación seleccionada.'}
@@ -413,7 +415,7 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                   aria-label="Filtrar tipo de instalación para índice"
                   value={tipoIndice}
                   onChange={(e) => setTipoIndice(e.target.value)}
-                  className="w-full sm:w-44 px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+                  className="w-full sm:w-44 px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500"
                 >
                   <option value="todos">Todos los tipos</option>
                   {tiposDisponibles.map((t) => (
@@ -429,7 +431,7 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                 value={instalacionIndiceId}
                 onChange={(e) => setInstalacionIndiceId(e.target.value)}
                 disabled={instalacionesPorTipoIndice.length === 0}
-                className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] disabled:opacity-60"
+                className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500 disabled:opacity-60"
               >
                 <option value="todas">Todas las instalaciones (General)</option>
                 {instalacionesPorTipoIndice.map((inst) => (
@@ -442,11 +444,11 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
           </div>
 
           {cargando ? (
-            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] bg-[#f4f6fb]/60 text-xs text-[#5d6678]">
+            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb]/60 dark:bg-slate-800/50 text-xs text-[#5d6678] dark:text-slate-400">
               Cargando índice de instalaciones...
             </div>
           ) : datosIndice.length === 0 ? (
-            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] bg-[#f4f6fb]/60 text-xs text-[#5d6678] px-4 text-center">
+            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb]/60 dark:bg-slate-800/50 text-xs text-[#5d6678] dark:text-slate-400 px-4 text-center">
               No hay instalaciones registradas para graficar.
             </div>
           ) : (
@@ -460,11 +462,15 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                 >
                   <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={datosIndice} margin={{ top: 14, right: 12, left: -14, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ef" vertical={false} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={isDark ? '#334155' : '#e2e6ef'}
+                        vertical={false}
+                      />
                       <XAxis
                         dataKey="etiqueta"
-                        tick={{ fill: '#5d6678', fontSize: 11 }}
-                        axisLine={{ stroke: '#e2e6ef' }}
+                        tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                        axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                         tickLine={false}
                         interval={0}
                         angle={-15}
@@ -474,28 +480,35 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                       <YAxis
                         domain={[0, 10]}
                         ticks={[0, 2, 4, 6, 7, 8, 10]}
-                        tick={{ fill: '#5d6678', fontSize: 11 }}
-                        axisLine={{ stroke: '#e2e6ef' }}
+                        tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                        axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                         tickLine={false}
                       />
                       <Tooltip
                         content={TooltipIndiceInstalacion}
-                        cursor={{ fill: '#e3f4f2', opacity: 0.45 }}
+                        cursor={
+                          isDark
+                            ? { fill: 'rgba(20, 184, 166, 0.12)' }
+                            : { fill: '#e3f4f2', opacity: 0.45 }
+                        }
                       />
                       <ReferenceLine
                         y={7}
-                        stroke="#d97706"
+                        stroke={isDark ? '#fbbf24' : '#d97706'}
                         strokeDasharray="4 4"
                         label={{
                           value: 'Mín. 7.0',
-                          fill: '#d97706',
+                          fill: isDark ? '#fbbf24' : '#d97706',
                           fontSize: 10,
                           position: 'insideTopRight',
                         }}
                       />
                       <Bar dataKey="promedio" name="Índice (0 - 10)" radius={[8, 8, 0, 0]} maxBarSize={48}>
                         {datosIndice.map((entry, idx) => (
-                          <Cell key={`${entry.tipo}-${entry.nombre}-${idx}`} fill={colorBarraIndice(entry)} />
+                          <Cell
+                            key={`${entry.tipo}-${entry.nombre}-${idx}`}
+                            fill={colorBarraIndice(entry, isDark)}
+                          />
                         ))}
                       </Bar>
                     </BarChart>
@@ -503,21 +516,21 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-[#e2e6ef] text-[11px] text-[#5d6678]">
-                <span className="inline-flex items-center gap-1.5 font-medium text-[#1c2333]">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e]" />
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-[#e2e6ef] dark:border-slate-800 text-[11px] text-[#5d6678] dark:text-slate-400">
+                <span className="inline-flex items-center gap-1.5 font-medium text-[#1c2333] dark:text-slate-200">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e] dark:bg-emerald-500" />
                   Índice General
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488]" />
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488] dark:bg-teal-500" />
                   Destacado (&ge; 8.5)
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6]" />
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6] dark:bg-teal-400" />
                   Aceptable (7.0 – 8.4)
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#dc2626]" />
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#dc2626] dark:bg-red-500" />
                   Por mejorar (&lt; 7.0)
                 </span>
               </div>
@@ -526,20 +539,20 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
         </div>
 
         {/* Gráfica 2: Participación en Encuestas de Talleres */}
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 sm:p-6 shadow-xs min-w-0 flex flex-col">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs min-w-0 flex flex-col">
           <div className="flex flex-col gap-3 mb-4">
             <div>
-              <h3 className="text-base font-bold text-[#1c2333]">
+              <h3 className="text-base font-bold text-[#1c2333] dark:text-slate-100">
                 Participación en Encuestas de Talleres
               </h3>
-              <p className="text-xs text-[#5d6678]">
+              <p className="text-xs text-[#5d6678] dark:text-slate-400">
                 Evaluaciones anónimas recibidas {modoParticipacion === 'tipo' ? 'agrupadas por tipo de instalación' : 'por cada taller o laboratorio'} en el ciclo activo.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <div
-                className="inline-flex rounded-xl border border-[#e2e6ef] bg-[#f4f6fb] p-1"
+                className="inline-flex rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800 p-1"
                 role="group"
                 aria-label="Agrupación de participación en talleres"
               >
@@ -548,8 +561,8 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                   onClick={() => setModoParticipacion('instalacion')}
                   className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                     modoParticipacion === 'instalacion'
-                      ? 'bg-[#0f766e] text-white shadow-xs'
-                      : 'text-[#5d6678] hover:text-[#1c2333]'
+                      ? 'bg-[#0f766e] dark:bg-teal-600 text-white shadow-xs'
+                      : 'text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-200'
                   }`}
                 >
                   Por Instalación
@@ -559,8 +572,8 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                   onClick={() => setModoParticipacion('tipo')}
                   className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                     modoParticipacion === 'tipo'
-                      ? 'bg-[#0f766e] text-white shadow-xs'
-                      : 'text-[#5d6678] hover:text-[#1c2333]'
+                      ? 'bg-[#0f766e] dark:bg-teal-600 text-white shadow-xs'
+                      : 'text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-200'
                   }`}
                 >
                   Por Tipo
@@ -572,7 +585,7 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                   aria-label="Filtrar tipo de instalación para participación"
                   value={tipoParticipacion}
                   onChange={(e) => setTipoParticipacion(e.target.value)}
-                  className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+                  className="w-full sm:flex-1 px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500"
                 >
                   <option value="todos">Todos los tipos</option>
                   {tiposDisponibles.map((t) => (
@@ -586,23 +599,23 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
           </div>
 
           {!cargando && datosParticipacion.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-3 py-2 rounded-xl bg-[#f4f6fb] border border-[#e2e6ef] text-xs">
-              <span className="text-[#5d6678]">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-3 py-2 rounded-xl bg-[#f4f6fb] dark:bg-slate-800/70 border border-[#e2e6ef] dark:border-slate-700 text-xs">
+              <span className="text-[#5d6678] dark:text-slate-400">
                 Evaluaciones mostradas:{' '}
-                <strong className="text-[#1c2333]">{totalEvaluacionesVista}</strong>
+                <strong className="text-[#1c2333] dark:text-slate-100">{totalEvaluacionesVista}</strong>
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-[#e3f4f2] text-[#0f766e] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-[#e3f4f2] dark:bg-teal-500/15 text-[#0f766e] dark:text-teal-300 font-bold">
                 {kpisTalleres.instalacionesEvaluadas} de {kpisTalleres.totalInstalaciones} evaluadas
               </span>
             </div>
           )}
 
           {cargando ? (
-            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] bg-[#f4f6fb]/60 text-xs text-[#5d6678]">
+            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb]/60 dark:bg-slate-800/50 text-xs text-[#5d6678] dark:text-slate-400">
               Cargando participación en talleres...
             </div>
           ) : datosParticipacion.length === 0 ? (
-            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] bg-[#f4f6fb]/60 text-xs text-[#5d6678] px-4 text-center">
+            <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb]/60 dark:bg-slate-800/50 text-xs text-[#5d6678] dark:text-slate-400 px-4 text-center">
               No hay instalaciones registradas para graficar.
             </div>
           ) : (
@@ -622,11 +635,15 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                       data={datosParticipacion}
                       margin={{ top: 14, right: 12, left: -14, bottom: 20 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ef" vertical={false} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={isDark ? '#334155' : '#e2e6ef'}
+                        vertical={false}
+                      />
                       <XAxis
                         dataKey="etiqueta"
-                        tick={{ fill: '#5d6678', fontSize: 11 }}
-                        axisLine={{ stroke: '#e2e6ef' }}
+                        tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                        axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                         tickLine={false}
                         interval={0}
                         angle={-15}
@@ -635,13 +652,17 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                       />
                       <YAxis
                         allowDecimals={false}
-                        tick={{ fill: '#5d6678', fontSize: 11 }}
-                        axisLine={{ stroke: '#e2e6ef' }}
+                        tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                        axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                         tickLine={false}
                       />
                       <Tooltip
                         content={TooltipParticipacionInstalacion}
-                        cursor={{ fill: '#e3f4f2', opacity: 0.45 }}
+                        cursor={
+                          isDark
+                            ? { fill: 'rgba(20, 184, 166, 0.12)' }
+                            : { fill: '#e3f4f2', opacity: 0.45 }
+                        }
                       />
                       <Bar
                         dataKey="evaluaciones"
@@ -652,7 +673,7 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                         {datosParticipacion.map((entry, idx) => (
                           <Cell
                             key={`${entry.tipo}-${entry.nombre}-${idx}`}
-                            fill={colorBarraParticipacionInst(entry.evaluaciones, maximoParticipacion)}
+                            fill={colorBarraParticipacionInst(entry.evaluaciones, maximoParticipacion, isDark)}
                           />
                         ))}
                       </Bar>
@@ -661,21 +682,21 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-[#e2e6ef] text-[11px] text-[#5d6678]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-[#e2e6ef] dark:border-slate-800 text-[11px] text-[#5d6678] dark:text-slate-400">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e]" />
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e] dark:bg-emerald-500" />
                   Alta participación
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488]" />
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488] dark:bg-teal-500" />
                   Media
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6]" />
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6] dark:bg-teal-400" />
                   Inicial
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-[#cbd5e1]" />
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#cbd5e1] dark:bg-slate-600" />
                   Sin respuestas (0)
                 </span>
               </div>
@@ -684,22 +705,22 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
         </div>
       </div>
 
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
+      <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-8">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-[#1c2333]">Talleres y laboratorios</h2>
-          <p className="text-xs text-[#5d6678]">
+          <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">Talleres y laboratorios</h2>
+          <p className="text-xs text-[#5d6678] dark:text-slate-400">
             {ciclo ? `${ciclo.nombre}. ` : ''}Promedios en escala de 10. Los resultados son anónimos.
           </p>
         </div>
 
         {error && (
-          <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mb-4">{error}</p>
+          <p className="text-sm text-[#dc2626] dark:text-red-300 font-medium bg-[#fee2e2] dark:bg-red-950/50 border border-transparent dark:border-red-800/60 rounded-xl p-3 mb-4">{error}</p>
         )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-[#e2e6ef] text-[#5d6678] uppercase tracking-wider">
+              <tr className="border-b border-[#e2e6ef] dark:border-slate-800 text-[#5d6678] dark:text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-3 font-semibold">Instalación</th>
                 <th className="py-3 px-3 font-semibold">Evaluaciones</th>
                 <th className="py-3 px-3 font-semibold w-40">Promedio</th>
@@ -711,20 +732,20 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                 <th className="py-3 px-3 font-semibold text-right">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e2e6ef]">
+            <tbody className="divide-y divide-[#e2e6ef] dark:divide-slate-800">
               {filas.map((f) => (
-                <tr key={f.id} className="hover:bg-[#f4f6fb]/60 transition-colors">
+                <tr key={f.id} className="hover:bg-[#f4f6fb]/60 dark:hover:bg-slate-800/60 transition-colors">
                   <td className="py-3 px-3">
-                    <span className="font-medium text-[#1c2333]">{f.nombre}</span>
-                    <span className="block text-[11px] text-[#5d6678]">
+                    <span className="font-medium text-[#1c2333] dark:text-slate-100">{f.nombre}</span>
+                    <span className="block text-[11px] text-[#5d6678] dark:text-slate-400">
                       {f.tipo}
                       {!f.activa && ' · Inactiva'}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-[#5d6678]">{f.totalEvaluaciones}</td>
+                  <td className="py-3 px-3 text-[#5d6678] dark:text-slate-400">{f.totalEvaluaciones}</td>
                   <td className="py-3 px-3">
                     {f.promedio === null ? (
-                      <span className="text-[#5d6678]">Sin evaluaciones</span>
+                      <span className="text-[#5d6678] dark:text-slate-400">Sin evaluaciones</span>
                     ) : (
                       <Barra valor={f.promedio} max={10} />
                     )}
@@ -732,7 +753,7 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                   {DIMENSIONES.map((d) => (
                     <td key={d} className="py-3 px-3">
                       {f.porDimension[d] === null ? (
-                        <span className="text-[#5d6678]">—</span>
+                        <span className="text-[#5d6678] dark:text-slate-400">—</span>
                       ) : (
                         <Barra valor={f.porDimension[d] as number} max={10} />
                       )}
@@ -741,7 +762,7 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
                   <td className="py-3 px-3 text-right">
                     <button
                       onClick={() => setSeleccionId(f.id)}
-                      className="px-3 py-1 rounded-lg border border-[#e2e6ef] text-[#0f766e] hover:bg-[#e3f4f2] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                      className="px-3 py-1 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-[#0f766e] dark:text-teal-400 hover:bg-[#e3f4f2] dark:hover:bg-teal-950/60 font-semibold transition-colors cursor-pointer whitespace-nowrap"
                     >
                       Ver detalle
                     </button>
@@ -750,7 +771,7 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
               ))}
               {(cargando || filas.length === 0) && (
                 <tr>
-                  <td colSpan={DIMENSIONES.length + 4} className="py-8 text-center text-[#5d6678]">
+                  <td colSpan={DIMENSIONES.length + 4} className="py-8 text-center text-[#5d6678] dark:text-slate-400">
                     {cargando ? 'Cargando...' : 'No hay instalaciones registradas.'}
                   </td>
                 </tr>
@@ -761,17 +782,17 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
       </div>
 
       {detalle && (
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-md mb-8">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-md mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-lg font-bold text-[#1c2333]">{detalle.nombre}</h2>
-              <p className="text-xs text-[#5d6678]">
+              <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">{detalle.nombre}</h2>
+              <p className="text-xs text-[#5d6678] dark:text-slate-400">
                 {detalle.tipo} · {detalle.totalEvaluaciones} evaluaciones
               </p>
             </div>
             <button
               onClick={() => setSeleccionId(null)}
-              className="px-3 py-1.5 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#5d6678] hover:bg-[#f4f6fb] cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-xs font-semibold text-[#5d6678] dark:text-slate-300 hover:bg-[#f4f6fb] dark:hover:bg-slate-800 cursor-pointer"
             >
               Cerrar detalle
             </button>
@@ -779,15 +800,15 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-sm font-bold text-[#1c2333] mb-3">Promedio por pregunta</h3>
+              <h3 className="text-sm font-bold text-[#1c2333] dark:text-slate-100 mb-3">Promedio por pregunta</h3>
               {detalle.porPregunta.length === 0 ? (
-                <p className="text-xs text-[#5d6678]">Aún no hay respuestas en este ciclo.</p>
+                <p className="text-xs text-[#5d6678] dark:text-slate-400">Aún no hay respuestas en este ciclo.</p>
               ) : (
                 <div className="space-y-3">
                   {detalle.porPregunta.map((p) => (
                     <div key={p.id}>
-                      <p className="text-xs text-[#1c2333] mb-1">
-                        <span className="font-semibold text-[#0f766e]">{p.dimension}</span> · {p.texto}
+                      <p className="text-xs text-[#1c2333] dark:text-slate-200 mb-1">
+                        <span className="font-semibold text-[#0f766e] dark:text-teal-400">{p.dimension}</span> · {p.texto}
                       </p>
                       <Barra valor={p.promedio} max={10} />
                     </div>
@@ -797,15 +818,15 @@ export default function ResultadosInstalaciones({ area, refresco = 0 }: Props) {
             </div>
 
             <div>
-              <h3 className="text-sm font-bold text-[#1c2333] mb-3">Comentarios anónimos</h3>
+              <h3 className="text-sm font-bold text-[#1c2333] dark:text-slate-100 mb-3">Comentarios anónimos</h3>
               {detalle.comentarios.length === 0 ? (
-                <p className="text-xs text-[#5d6678]">Sin comentarios.</p>
+                <p className="text-xs text-[#5d6678] dark:text-slate-400">Sin comentarios.</p>
               ) : (
                 <ul className="space-y-2">
                   {detalle.comentarios.map((c, i) => (
                     <li
                       key={i}
-                      className="text-xs text-[#1c2333] p-3 rounded-xl border border-[#e2e6ef] bg-[#f4f6fb]"
+                      className="text-xs text-[#1c2333] dark:text-slate-200 p-3 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800/70"
                     >
                       “{c}”
                     </li>
