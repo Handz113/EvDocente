@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-@import 'tailwindcss';
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-institutional: #003366;
@@ -27,6 +28,7 @@
 }
 
 :root {
+  color-scheme: light;
   --fondo: #f4f6fb;
   --tarjeta: #ffffff;
   --texto: #1c2333;
@@ -43,8 +45,30 @@
   --sombra: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 16px rgba(16, 24, 40, .06);
 }
 
+.dark {
+  color-scheme: dark;
+  --fondo: #020617;
+  --tarjeta: #0f172a;
+  --texto: #f1f5f9;
+  --texto-suave: #94a3b8;
+  --borde: #1e293b;
+  --primario: #3b82f6;
+  --primario-suave: #1e3a8a;
+  --personal: #14b8a6;
+  --personal-suave: #134e4a;
+  --ok: #22c55e;
+  --medio: #f59e0b;
+  --bajo: #ef4444;
+  --sombra: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 16px rgba(0, 0, 0, .45);
+}
+
 * {
   box-sizing: border-box;
+}
+
+html {
+  background-color: var(--fondo);
+  color: var(--texto);
 }
 
 body {
@@ -58,11 +82,14 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Poppins', sans-serif;
 }
 
-/* Hide scrollbars */
+/* Custom scrollbars */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #c0c0c0; }
+
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
 input:focus, textarea:focus, select:focus {
   outline: none;

@@ -16,6 +16,7 @@ import Barra from '../../../components/Barra'
 import ParticipacionAlumnos from '../../../components/ParticipacionAlumnos'
 import ResultadosInstalaciones from '../../../components/ResultadosInstalaciones'
 import { useAuth } from '../../../context/AuthContext'
+import { useTheme } from '../../../context/ThemeContext'
 import { useNavigate } from '../../../router'
 import {
   listarDocentesAPI,
@@ -73,12 +74,12 @@ function normalizarTexto(texto: string): string {
     .trim()
 }
 
-function colorBarraCoordinacion(item: DatoGraficoCoordinacion): string {
-  if (item.tipo === 'institucional') return '#0f766e'
-  if (item.evaluaciones === 0 && item.promedio === 0) return '#cbd5e1'
-  if (item.promedio >= 8.5) return '#0d9488'
-  if (item.promedio >= 7.0) return '#14b8a6'
-  return '#dc2626'
+function colorBarraCoordinacion(item: DatoGraficoCoordinacion, isDark = false): string {
+  if (item.tipo === 'institucional') return isDark ? '#10b981' : '#0f766e'
+  if (item.evaluaciones === 0 && item.promedio === 0) return isDark ? '#475569' : '#cbd5e1'
+  if (item.promedio >= 8.5) return isDark ? '#14b8a6' : '#0d9488'
+  if (item.promedio >= 7.0) return isDark ? '#2dd4bf' : '#14b8a6'
+  return isDark ? '#ef4444' : '#dc2626'
 }
 
 function TooltipCoordinacion({ active, payload }: TooltipContentProps) {
@@ -99,27 +100,27 @@ function TooltipCoordinacion({ active, payload }: TooltipContentProps) {
 
   const estadoClase =
     item.evaluaciones === 0 && item.promedio === 0
-      ? 'bg-[#f4f6fb] text-[#5d6678]'
+      ? 'bg-[#f4f6fb] text-[#5d6678] dark:bg-slate-800 dark:text-slate-400'
       : item.promedio >= 7.0
-      ? 'bg-[#e3f4f2] text-[#0f766e]'
-      : 'bg-[#fee2e2] text-[#dc2626]'
+      ? 'bg-[#e3f4f2] text-[#0f766e] dark:bg-teal-500/15 dark:text-teal-300'
+      : 'bg-[#fee2e2] text-[#dc2626] dark:bg-red-500/15 dark:text-red-300'
 
   return (
-    <div className="bg-white border border-[#e2e6ef] rounded-xl p-3 shadow-md max-w-xs text-xs">
+    <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-700 rounded-xl p-3 shadow-md max-w-xs text-xs">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <span className="font-bold text-[#1c2333] leading-snug">{item.nombre}</span>
+        <span className="font-bold text-[#1c2333] dark:text-slate-100 leading-snug">{item.nombre}</span>
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${estadoClase}`}>
           {estadoTexto}
         </span>
       </div>
-      {item.subtitulo && <p className="text-[11px] text-[#5d6678] mb-1.5">{item.subtitulo}</p>}
-      <div className="flex items-center justify-between gap-4 pt-1.5 border-t border-[#e2e6ef]">
-        <span className="text-[#5d6678]">Promedio:</span>
-        <strong className="text-sm font-extrabold text-[#0f766e]">{item.promedio.toFixed(2)} / 10</strong>
+      {item.subtitulo && <p className="text-[11px] text-[#5d6678] dark:text-slate-400 mb-1.5">{item.subtitulo}</p>}
+      <div className="flex items-center justify-between gap-4 pt-1.5 border-t border-[#e2e6ef] dark:border-slate-800">
+        <span className="text-[#5d6678] dark:text-slate-400">Promedio:</span>
+        <strong className="text-sm font-extrabold text-[#0f766e] dark:text-teal-400">{item.promedio.toFixed(2)} / 10</strong>
       </div>
       <div className="flex items-center justify-between gap-4 mt-0.5">
-        <span className="text-[#5d6678]">Evaluaciones:</span>
-        <span className="font-semibold text-[#1c2333]">{item.evaluaciones}</span>
+        <span className="text-[#5d6678] dark:text-slate-400">Evaluaciones:</span>
+        <span className="font-semibold text-[#1c2333] dark:text-slate-100">{item.evaluaciones}</span>
       </div>
     </div>
   )
@@ -127,6 +128,7 @@ function TooltipCoordinacion({ active, payload }: TooltipContentProps) {
 
 export default function PanelCoordinacion() {
   const { usuario, cerrarSesion } = useAuth()
+  const { isDark } = useTheme()
   const navigate = useNavigate()
   const [ciclos, setCiclos] = useState<CicloEscolar[]>([])
   const [cicloSeleccionado, setCicloSeleccionado] = useState<string>('')
@@ -631,22 +633,22 @@ export default function PanelCoordinacion() {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1c2333] mb-1">Panel de Coordinación Académica</h1>
-            <p className="text-sm text-[#5d6678]">
+            <h1 className="text-2xl font-bold text-[#1c2333] dark:text-slate-100 mb-1">Panel de Coordinación Académica</h1>
+            <p className="text-sm text-[#5d6678] dark:text-slate-400">
               Monitoreo de desempeño para asignación docente (ciclos activos e históricos).
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e3f4f2] text-[#0f766e] text-[11px] font-semibold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e3f4f2] dark:bg-teal-500/15 text-[#0f766e] dark:text-teal-300 text-[11px] font-semibold">
                 <span className="relative flex w-2 h-2">
                   <span className="absolute inline-flex w-full h-full rounded-full bg-[#14b8a6] opacity-75 animate-ping motion-reduce:animate-none" />
-                  <span className="relative inline-flex w-2 h-2 rounded-full bg-[#0f766e]" />
+                  <span className="relative inline-flex w-2 h-2 rounded-full bg-[#0f766e] dark:bg-teal-400" />
                 </span>
                 En vivo · {textoHaceCuanto(ultimaActualizacion, ahora)}
               </span>
               <button
                 type="button"
                 onClick={actualizarAhora}
-                className="px-2.5 py-1 rounded-full border border-[#e2e6ef] text-[11px] font-semibold text-[#5d6678] hover:text-[#0f766e] hover:bg-[#e3f4f2] transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-full border border-[#e2e6ef] dark:border-slate-700 text-[11px] font-semibold text-[#5d6678] dark:text-slate-300 hover:text-[#0f766e] dark:hover:text-teal-300 hover:bg-[#e3f4f2] dark:hover:bg-teal-950/50 transition-colors cursor-pointer"
               >
                 Actualizar ahora
               </button>
@@ -658,7 +660,7 @@ export default function PanelCoordinacion() {
               <div className="flex items-center gap-2">
                 <label
                   htmlFor="selector-ciclo-coordinacion"
-                  className="text-xs font-semibold text-[#5d6678] whitespace-nowrap"
+                  className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 whitespace-nowrap"
                 >
                   Ciclo escolar:
                 </label>
@@ -666,7 +668,7 @@ export default function PanelCoordinacion() {
                   id="selector-ciclo-coordinacion"
                   value={cicloSeleccionado}
                   onChange={(e) => setCicloSeleccionado(e.target.value)}
-                  className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] focus:outline-none shadow-xs cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500 focus:outline-none shadow-xs cursor-pointer"
                 >
                   {ciclos.map((c) => (
                     <option key={c.id_ciclo} value={String(c.id_ciclo)}>
@@ -684,7 +686,7 @@ export default function PanelCoordinacion() {
                 disabled={isExporting}
                 aria-haspopup="menu"
                 aria-expanded={menuExportarAbierto}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0d9488] text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0d9488] dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 <span>{isExporting ? 'Generando...' : 'Exportar Reporte'}</span>
                 <span className="text-[10px] leading-none">{menuExportarAbierto ? '▲' : '▼'}</span>
@@ -694,13 +696,13 @@ export default function PanelCoordinacion() {
                 <div
                   role="menu"
                   aria-label="Opciones de exportación de reporte"
-                  className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-[#e2e6ef] shadow-lg py-1.5 z-40"
+                  className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-700 shadow-lg py-1.5 z-40"
                 >
                   <button
                     type="button"
                     role="menuitem"
                     onClick={descargarReportePDF}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] hover:bg-[#e3f4f2] hover:text-[#0f766e] transition-colors cursor-pointer flex items-center gap-2.5"
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] dark:text-slate-200 hover:bg-[#e3f4f2] dark:hover:bg-slate-800 hover:text-[#0f766e] dark:hover:text-teal-300 transition-colors cursor-pointer flex items-center gap-2.5"
                   >
                     <span>📄</span>
                     <span>Exportar a PDF (Resumen Ejecutivo)</span>
@@ -709,7 +711,7 @@ export default function PanelCoordinacion() {
                     type="button"
                     role="menuitem"
                     onClick={descargarExcel}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] hover:bg-[#e3f4f2] hover:text-[#0f766e] transition-colors cursor-pointer flex items-center gap-2.5"
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] dark:text-slate-200 hover:bg-[#e3f4f2] dark:hover:bg-slate-800 hover:text-[#0f766e] dark:hover:text-teal-300 transition-colors cursor-pointer flex items-center gap-2.5"
                   >
                     <span>📊</span>
                     <span>Exportar a Excel (Datos Completos)</span>
@@ -718,7 +720,7 @@ export default function PanelCoordinacion() {
                     type="button"
                     role="menuitem"
                     onClick={descargarCSV}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] hover:bg-[#e3f4f2] hover:text-[#0f766e] transition-colors cursor-pointer flex items-center gap-2.5"
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#1c2333] dark:text-slate-200 hover:bg-[#e3f4f2] dark:hover:bg-slate-800 hover:text-[#0f766e] dark:hover:text-teal-300 transition-colors cursor-pointer flex items-center gap-2.5"
                   >
                     <span>📝</span>
                     <span>Exportar a CSV (Texto Plano)</span>
@@ -729,49 +731,49 @@ export default function PanelCoordinacion() {
           </div>
         </div>
         {error && (
-          <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mt-4">{error}</p>
+          <p className="text-sm text-[#dc2626] dark:text-red-300 font-medium bg-[#fee2e2] dark:bg-red-950/50 border border-transparent dark:border-red-800/60 rounded-xl p-3 mt-4">{error}</p>
         )}
       </div>
 
       {/* Tarjetas KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#0f766e]">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#0f766e] dark:text-teal-400">
             {promedioGeneral.toFixed(1)}
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">Promedio General Institucional</div>
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">Promedio General Institucional</div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#0f766e]">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#0f766e] dark:text-teal-400">
             {totalRespuestas}
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">Evaluaciones Recibidas</div>
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">Evaluaciones Recibidas</div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#0f766e]">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#0f766e] dark:text-teal-400">
             {listaPorArea.length}
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">Docentes Monitoreados</div>
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">Docentes Monitoreados</div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className={`text-3xl font-extrabold ${enRiesgo > 0 ? 'text-[#dc2626]' : 'text-[#15803d]'}`}>
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className={`text-3xl font-extrabold ${enRiesgo > 0 ? 'text-[#dc2626] dark:text-red-400' : 'text-[#15803d] dark:text-emerald-400'}`}>
             {enRiesgo}
           </div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">No Aptos (&lt; 7.0)</div>
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">No Aptos (&lt; 7.0)</div>
         </div>
       </div>
 
       {/* Gráfico Comparativo Institucional por Área Académica / Materia */}
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 sm:p-6 shadow-xs mb-8 min-w-0">
+      <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs mb-8 min-w-0">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-5">
           <div>
-            <h2 className="text-lg font-bold text-[#1c2333]">
+            <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">
               Desempeño Institucional por {modoGrafico === 'area' ? 'Área Académica' : 'Materia'}
             </h2>
-            <p className="text-xs text-[#5d6678]">
+            <p className="text-xs text-[#5d6678] dark:text-slate-400">
               {modoGrafico === 'area'
                 ? areaGrafico === 'todas'
                   ? 'Vista general comparativa entre el Promedio General Institucional y todas las áreas académicas (0 - 10).'
@@ -784,7 +786,7 @@ export default function PanelCoordinacion() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
             <div
-              className="inline-flex rounded-xl border border-[#e2e6ef] bg-[#f4f6fb] p-1"
+              className="inline-flex rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800 p-1"
               role="group"
               aria-label="Agrupación del gráfico"
             >
@@ -793,8 +795,8 @@ export default function PanelCoordinacion() {
                 onClick={() => setModoGrafico('area')}
                 className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                   modoGrafico === 'area'
-                    ? 'bg-[#0f766e] text-white shadow-xs'
-                    : 'text-[#5d6678] hover:text-[#1c2333]'
+                    ? 'bg-[#0f766e] dark:bg-teal-600 text-white shadow-xs'
+                    : 'text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-200'
                 }`}
               >
                 Por Área Académica
@@ -804,8 +806,8 @@ export default function PanelCoordinacion() {
                 onClick={() => setModoGrafico('materia')}
                 className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                   modoGrafico === 'materia'
-                    ? 'bg-[#0f766e] text-white shadow-xs'
-                    : 'text-[#5d6678] hover:text-[#1c2333]'
+                    ? 'bg-[#0f766e] dark:bg-teal-600 text-white shadow-xs'
+                    : 'text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-200'
                 }`}
               >
                 Por Materia
@@ -817,7 +819,7 @@ export default function PanelCoordinacion() {
                 aria-label="Seleccionar área académica"
                 value={areaGrafico}
                 onChange={(e) => setAreaGrafico(e.target.value)}
-                className="w-full sm:w-52 px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+                className="w-full sm:w-52 px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500"
               >
                 <option value="todas">Todas las áreas (General)</option>
                 {areasGraficoDisponibles.map((a) => (
@@ -832,7 +834,7 @@ export default function PanelCoordinacion() {
                 value={materiaGrafico}
                 onChange={(e) => setMateriaGrafico(e.target.value)}
                 disabled={materiasGraficoDisponibles.length === 0}
-                className="w-full sm:w-64 px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] disabled:opacity-60"
+                className="w-full sm:w-64 px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500 disabled:opacity-60"
               >
                 {materiasGraficoDisponibles.length === 0 ? (
                   <option value="">Sin materias disponibles</option>
@@ -849,7 +851,7 @@ export default function PanelCoordinacion() {
         </div>
 
         {datosGrafico.length === 0 ? (
-          <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] bg-[#f4f6fb]/60 text-xs text-[#5d6678] px-4 text-center">
+          <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb]/60 dark:bg-slate-800/50 text-xs text-[#5d6678] dark:text-slate-400 px-4 text-center">
             {error
               ? 'No se pudieron cargar las métricas para graficar.'
               : 'Cargando métricas institucionales del ciclo seleccionado...'}
@@ -865,11 +867,15 @@ export default function PanelCoordinacion() {
               >
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={datosGrafico} margin={{ top: 14, right: 16, left: -12, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ef" vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={isDark ? '#334155' : '#e2e6ef'}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="etiqueta"
-                      tick={{ fill: '#5d6678', fontSize: 11 }}
-                      axisLine={{ stroke: '#e2e6ef' }}
+                      tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                      axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                       tickLine={false}
                       interval={0}
                       angle={-15}
@@ -879,28 +885,35 @@ export default function PanelCoordinacion() {
                     <YAxis
                       domain={[0, 10]}
                       ticks={[0, 2, 4, 6, 7, 8, 10]}
-                      tick={{ fill: '#5d6678', fontSize: 11 }}
-                      axisLine={{ stroke: '#e2e6ef' }}
+                      tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                      axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                       tickLine={false}
                     />
                     <Tooltip
                       content={TooltipCoordinacion}
-                      cursor={{ fill: '#e3f4f2', opacity: 0.45 }}
+                      cursor={
+                        isDark
+                          ? { fill: 'rgba(20, 184, 166, 0.12)' }
+                          : { fill: '#e3f4f2', opacity: 0.45 }
+                      }
                     />
                     <ReferenceLine
                       y={7}
-                      stroke="#d97706"
+                      stroke={isDark ? '#fbbf24' : '#d97706'}
                       strokeDasharray="4 4"
                       label={{
                         value: 'Mín. Apto (7.0)',
-                        fill: '#d97706',
+                        fill: isDark ? '#fbbf24' : '#d97706',
                         fontSize: 11,
                         position: 'insideTopRight',
                       }}
                     />
                     <Bar dataKey="promedio" name="Promedio (0 - 10)" radius={[8, 8, 0, 0]} maxBarSize={54}>
                       {datosGrafico.map((entry, idx) => (
-                        <Cell key={`${entry.tipo}-${entry.nombre}-${idx}`} fill={colorBarraCoordinacion(entry)} />
+                        <Cell
+                          key={`${entry.tipo}-${entry.nombre}-${idx}`}
+                          fill={colorBarraCoordinacion(entry, isDark)}
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -908,21 +921,21 @@ export default function PanelCoordinacion() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 pt-3 border-t border-[#e2e6ef] text-[11px] text-[#5d6678]">
-              <span className="inline-flex items-center gap-1.5 font-medium text-[#1c2333]">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e]" />
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 pt-3 border-t border-[#e2e6ef] dark:border-slate-800 text-[11px] text-[#5d6678] dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5 font-medium text-[#1c2333] dark:text-slate-200">
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e] dark:bg-emerald-500" />
                 Promedio General Institucional
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488] dark:bg-teal-500" />
                 Destacado (&ge; 8.5)
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6] dark:bg-teal-400" />
                 Apto (7.0 – 8.4)
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#dc2626]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#dc2626] dark:bg-red-500" />
                 En Riesgo (&lt; 7.0)
               </span>
             </div>
@@ -931,14 +944,14 @@ export default function PanelCoordinacion() {
       </div>
 
       {/* Tabla con Filtros */}
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
+      <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-8">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-3">
           <div>
-            <h2 className="text-lg font-bold text-[#1c2333]">Evaluación por Docente</h2>
+            <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">Evaluación por Docente</h2>
             {docentesFiltrados.length > 0 && (
-              <p className="text-xs text-[#5d6678] mt-0.5">
-                Mostrando <strong className="text-[#1c2333]">{docentesVisibles.length}</strong> de{' '}
-                <strong className="text-[#1c2333]">{docentesFiltrados.length}</strong> docente
+              <p className="text-xs text-[#5d6678] dark:text-slate-400 mt-0.5">
+                Mostrando <strong className="text-[#1c2333] dark:text-slate-200">{docentesVisibles.length}</strong> de{' '}
+                <strong className="text-[#1c2333] dark:text-slate-200">{docentesFiltrados.length}</strong> docente
                 {docentesFiltrados.length === 1 ? '' : 's'}
               </p>
             )}
@@ -953,7 +966,7 @@ export default function PanelCoordinacion() {
                 onChange={(e) => setBusquedaDocente(e.target.value)}
                 className={`w-full px-3.5 py-2 ${
                   busquedaDocente ? 'pr-8' : ''
-                } rounded-xl border border-[#e2e6ef] bg-white text-xs text-[#1c2333] placeholder:text-[#5d6678]/70 focus:border-[#0f766e] focus:outline-none`}
+                } rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-[#1c2333] dark:text-slate-100 placeholder:text-[#5d6678]/70 dark:placeholder:text-slate-500 focus:border-[#0f766e] dark:focus:border-teal-500 focus:outline-none`}
               />
               {busquedaDocente && (
                 <button
@@ -961,7 +974,7 @@ export default function PanelCoordinacion() {
                   onClick={() => setBusquedaDocente('')}
                   aria-label="Limpiar búsqueda de docentes"
                   title="Limpiar búsqueda"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] hover:text-[#1c2333] hover:bg-[#f4f6fb] text-xs font-bold cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-100 hover:bg-[#f4f6fb] dark:hover:bg-slate-700 text-xs font-bold cursor-pointer"
                 >
                   ×
                 </button>
@@ -972,7 +985,7 @@ export default function PanelCoordinacion() {
               <select
                 value={cicloSeleccionado}
                 onChange={(e) => setCicloSeleccionado(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+                className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500"
               >
                 {ciclos.map((c) => (
                   <option key={c.id_ciclo} value={String(c.id_ciclo)}>
@@ -985,7 +998,7 @@ export default function PanelCoordinacion() {
             <select
               value={area}
               onChange={(e) => setArea(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+              className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500"
             >
               <option value="todas">Todas las áreas</option>
               {areasDisponibles.map((a) => (
@@ -996,7 +1009,7 @@ export default function PanelCoordinacion() {
             <select
               value={orden}
               onChange={(e) => setOrden(e.target.value as 'mayor' | 'menor')}
-              className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+              className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500"
             >
               <option value="mayor">Mayor promedio</option>
               <option value="menor">Menor promedio</option>
@@ -1006,7 +1019,7 @@ export default function PanelCoordinacion() {
               <button
                 type="button"
                 onClick={() => setMostrarTodosDocentes((prev) => !prev)}
-                className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 bg-[#e3f4f2] hover:bg-[#0f766e] text-[#0f766e] hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 dark:border-teal-500/40 bg-[#e3f4f2] dark:bg-teal-500/15 hover:bg-[#0f766e] dark:hover:bg-teal-600 text-[#0f766e] dark:text-teal-300 hover:text-white dark:hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
               >
                 {mostrarTodosDocentes
                   ? 'Mostrar menos (10)'
@@ -1019,7 +1032,7 @@ export default function PanelCoordinacion() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-[#e2e6ef] text-[#5d6678] uppercase tracking-wider">
+              <tr className="border-b border-[#e2e6ef] dark:border-slate-800 text-[#5d6678] dark:text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-3 font-semibold">Docente</th>
                 <th className="py-3 px-3 font-semibold">Área</th>
                 <th className="py-3 px-3 font-semibold">Evaluaciones</th>
@@ -1028,19 +1041,19 @@ export default function PanelCoordinacion() {
                 <th className="py-3 px-3 font-semibold text-right">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e2e6ef]">
+            <tbody className="divide-y divide-[#e2e6ef] dark:divide-slate-800">
               {docentesVisibles.map((r) => (
-                <tr key={r.id} className="hover:bg-[#f4f6fb]/60 transition-colors">
-                  <td className="py-3 px-3 font-medium text-[#1c2333]">{r.nombre}</td>
+                <tr key={r.id} className="hover:bg-[#f4f6fb]/60 dark:hover:bg-slate-800/60 transition-colors">
+                  <td className="py-3 px-3 font-medium text-[#1c2333] dark:text-slate-100">{r.nombre}</td>
                   <td className="py-3 px-3">
-                    <span className="px-2 py-0.5 rounded-full bg-[#e3f4f2] text-[#0f766e] text-[11px] font-semibold">
+                    <span className="px-2 py-0.5 rounded-full bg-[#e3f4f2] dark:bg-teal-500/15 text-[#0f766e] dark:text-teal-300 text-[11px] font-semibold">
                       {r.area}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-[#5d6678]">{r.totalEvaluaciones}</td>
+                  <td className="py-3 px-3 text-[#5d6678] dark:text-slate-400">{r.totalEvaluaciones}</td>
                   <td className="py-3 px-3">
                     {r.promedio === null ? (
-                      <span className="text-[#5d6678]">Sin evaluaciones</span>
+                      <span className="text-[#5d6678] dark:text-slate-400">Sin evaluaciones</span>
                     ) : (
                       <Barra valor={r.promedio} max={10} />
                     )}
@@ -1048,7 +1061,7 @@ export default function PanelCoordinacion() {
                   <td className="py-3 px-3">
                     <span
                       className={`font-semibold ${
-                        r.apto ? 'text-[#15803d]' : 'text-[#dc2626]'
+                        r.apto ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#dc2626] dark:text-red-400'
                       }`}
                     >
                       {r.categoria}
@@ -1057,7 +1070,7 @@ export default function PanelCoordinacion() {
                   <td className="py-3 px-3 text-right">
                     <button
                       onClick={() => setSeleccionId(r.id)}
-                      className="px-3 py-1 rounded-lg border border-[#e2e6ef] text-[#0f766e] hover:bg-[#e3f4f2] font-semibold transition-colors cursor-pointer"
+                      className="px-3 py-1 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-[#0f766e] dark:text-teal-400 hover:bg-[#e3f4f2] dark:hover:bg-teal-950/60 font-semibold transition-colors cursor-pointer"
                     >
                       Ver detalle
                     </button>
@@ -1066,7 +1079,7 @@ export default function PanelCoordinacion() {
               ))}
               {docentesFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-[#5d6678]">
+                  <td colSpan={6} className="py-8 text-center text-[#5d6678] dark:text-slate-400">
                     {busquedaDocente.trim()
                       ? 'No se encontraron docentes que coincidan con la búsqueda.'
                       : 'No hay docentes registrados en el ciclo seleccionado.'}
@@ -1080,26 +1093,26 @@ export default function PanelCoordinacion() {
 
       {/* Detalle del docente: por qué le fue bien o mal en cada materia */}
       {docenteDetalle && (
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-md mb-8">
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-md mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-lg font-bold text-[#1c2333]">{docenteDetalle.nombre}</h2>
-              <p className="text-xs text-[#5d6678]">{docenteDetalle.correo} · {docenteDetalle.area}</p>
+              <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">{docenteDetalle.nombre}</h2>
+              <p className="text-xs text-[#5d6678] dark:text-slate-400">{docenteDetalle.correo} · {docenteDetalle.area}</p>
             </div>
             <button
               onClick={() => setSeleccionId(null)}
-              className="px-3 py-1.5 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#5d6678] hover:bg-[#f4f6fb] cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-xs font-semibold text-[#5d6678] dark:text-slate-300 hover:bg-[#f4f6fb] dark:hover:bg-slate-800 cursor-pointer"
             >
               Cerrar detalle
             </button>
           </div>
 
-          {cargandoDetalle && <p className="text-sm text-[#5d6678]">Cargando resultados...</p>}
+          {cargandoDetalle && <p className="text-sm text-[#5d6678] dark:text-slate-400">Cargando resultados...</p>}
           {errorDetalle && (
-            <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3">{errorDetalle}</p>
+            <p className="text-sm text-[#dc2626] dark:text-red-300 font-medium bg-[#fee2e2] dark:bg-red-950/50 border border-transparent dark:border-red-800/60 rounded-xl p-3">{errorDetalle}</p>
           )}
           {!cargandoDetalle && !errorDetalle && resultados.length === 0 && (
-            <p className="text-sm text-[#5d6678]">El docente no tiene materias en el ciclo seleccionado.</p>
+            <p className="text-sm text-[#5d6678] dark:text-slate-400">El docente no tiene materias en el ciclo seleccionado.</p>
           )}
 
           <div className="space-y-4">
@@ -1127,19 +1140,19 @@ function DetalleMateria({ grupo }: { grupo: GrupoResultados }) {
     .sort((a, b) => a.promedio - b.promedio)
 
   return (
-    <div className="p-4 rounded-xl border border-[#e2e6ef] bg-[#f4f6fb]">
+    <div className="p-4 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800/60">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
         <div>
-          <h3 className="text-sm font-bold text-[#1c2333]">{grupo.nombre}</h3>
-          <p className="text-xs text-[#5d6678]">
+          <h3 className="text-sm font-bold text-[#1c2333] dark:text-slate-100">{grupo.nombre}</h3>
+          <p className="text-xs text-[#5d6678] dark:text-slate-400">
             CRN {grupo.crn} · Clave {grupo.clave}
           </p>
         </div>
         {grupo.totalEvaluaciones > 0 && grupo.promedio !== null && (
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-2xl font-extrabold text-[#0f766e]">{grupo.promedio.toFixed(1)}</span>
-            <span className="text-[#5d6678]">{grupo.totalEvaluaciones} evaluaciones</span>
-            <span className={`font-semibold ${grupo.aptoParaAsignacion ? 'text-[#15803d]' : 'text-[#dc2626]'}`}>
+            <span className="text-2xl font-extrabold text-[#0f766e] dark:text-teal-400">{grupo.promedio.toFixed(1)}</span>
+            <span className="text-[#5d6678] dark:text-slate-400">{grupo.totalEvaluaciones} evaluaciones</span>
+            <span className={`font-semibold ${grupo.aptoParaAsignacion ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#dc2626] dark:text-red-400'}`}>
               {grupo.categoria}
             </span>
           </div>
@@ -1147,15 +1160,15 @@ function DetalleMateria({ grupo }: { grupo: GrupoResultados }) {
       </div>
 
       {grupo.totalEvaluaciones === 0 ? (
-        <p className="text-xs text-[#5d6678]">Sin evaluaciones todavía.</p>
+        <p className="text-xs text-[#5d6678] dark:text-slate-400">Sin evaluaciones todavía.</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#5d6678] mb-2">Promedio por pregunta</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#5d6678] dark:text-slate-400 mb-2">Promedio por pregunta</h4>
             <div className="space-y-2">
               {grupo.porPregunta.map((p) => (
                 <div key={p.id}>
-                  <p className="text-xs text-[#1c2333] mb-1">
+                  <p className="text-xs text-[#1c2333] dark:text-slate-200 mb-1">
                     {p.id}. {p.texto}
                   </p>
                   <Barra valor={p.promedio} max={10} />
@@ -1166,18 +1179,18 @@ function DetalleMateria({ grupo }: { grupo: GrupoResultados }) {
 
           <div className="space-y-5">
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#5d6678] mb-2">Áreas de oportunidad</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#5d6678] dark:text-slate-400 mb-2">Áreas de oportunidad</h4>
               {areasOportunidad.length === 0 ? (
-                <p className="text-xs text-[#15803d] font-medium">Sin áreas de oportunidad.</p>
+                <p className="text-xs text-[#15803d] dark:text-emerald-400 font-medium">Sin áreas de oportunidad.</p>
               ) : (
                 <ul className="space-y-1.5">
                   {areasOportunidad.map((p) => (
                     <li
                       key={p.id}
-                      className="flex justify-between gap-3 text-xs p-2.5 rounded-lg bg-[#fee2e2] text-[#1c2333]"
+                      className="flex justify-between gap-3 text-xs p-2.5 rounded-lg bg-[#fee2e2] dark:bg-red-950/50 border border-transparent dark:border-red-800/60 text-[#1c2333] dark:text-slate-200"
                     >
                       <span>{p.texto}</span>
-                      <strong className="text-[#dc2626]">{p.promedio.toFixed(1)}</strong>
+                      <strong className="text-[#dc2626] dark:text-red-400">{p.promedio.toFixed(1)}</strong>
                     </li>
                   ))}
                 </ul>
@@ -1185,13 +1198,13 @@ function DetalleMateria({ grupo }: { grupo: GrupoResultados }) {
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#5d6678] mb-2">Comentarios anónimos</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#5d6678] dark:text-slate-400 mb-2">Comentarios anónimos</h4>
               {grupo.comentarios.length === 0 ? (
-                <p className="text-xs text-[#5d6678]">Sin comentarios todavía.</p>
+                <p className="text-xs text-[#5d6678] dark:text-slate-400">Sin comentarios todavía.</p>
               ) : (
                 <ul className="space-y-2">
                   {grupo.comentarios.map((c, i) => (
-                    <li key={i} className="text-xs text-[#1c2333] p-3 rounded-xl border border-[#e2e6ef] bg-white">
+                    <li key={i} className="text-xs text-[#1c2333] dark:text-slate-200 p-3 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-900">
                       “{c}”
                     </li>
                   ))}

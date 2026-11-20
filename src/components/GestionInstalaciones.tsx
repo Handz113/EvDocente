@@ -14,11 +14,12 @@ import {
   type PreguntaInstalacion,
 } from '../services/instalacionService'
 
-const claseInput = 'px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs focus:border-[#0f766e]'
+const claseInput =
+  'px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-[#1c2333] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-[#0f766e] dark:focus:border-teal-500'
 const claseBotonPrimario =
-  'px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed'
+  'px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] dark:bg-teal-600 dark:hover:bg-teal-500 text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed'
 const claseBotonSecundario =
-  'px-2.5 py-1 rounded-lg border border-[#e2e6ef] text-xs font-semibold text-[#5d6678] hover:bg-[#f4f6fb] cursor-pointer'
+  'px-2.5 py-1 rounded-lg border border-[#e2e6ef] dark:border-slate-700 text-xs font-semibold text-[#5d6678] dark:text-slate-300 hover:bg-[#f4f6fb] dark:hover:bg-slate-800 cursor-pointer'
 
 const INSTALACION_VACIA = { nombre: '', tipo: '', descripcion: '', carrera: '' }
 const PREGUNTA_VACIA: { idInstalacion: string; dimension: Dimension; texto: string } = {
@@ -29,7 +30,7 @@ const PREGUNTA_VACIA: { idInstalacion: string; dimension: Dimension; texto: stri
 
 function Estado({ activa }: { activa: boolean }) {
   return (
-    <span className={`font-semibold text-xs ${activa ? 'text-[#15803d]' : 'text-[#dc2626]'}`}>
+    <span className={`font-semibold text-xs ${activa ? 'text-[#15803d] dark:text-emerald-400' : 'text-[#dc2626] dark:text-red-400'}`}>
       {activa ? 'Activa' : 'Inactiva'}
     </span>
   )
@@ -187,8 +188,10 @@ export default function GestionInstalaciones() {
     <>
       {(error || aviso) && (
         <p
-          className={`text-sm font-medium rounded-xl p-3 mb-4 ${
-            error ? 'text-[#dc2626] bg-[#fee2e2]' : 'text-[#15803d] bg-[#e7f6ec]'
+          className={`text-sm font-medium rounded-xl p-3 mb-4 border ${
+            error
+              ? 'text-[#dc2626] dark:text-red-300 bg-[#fee2e2] dark:bg-red-950/50 border-transparent dark:border-red-800/60'
+              : 'text-[#15803d] dark:text-emerald-300 bg-[#e7f6ec] dark:bg-emerald-950/50 border-transparent dark:border-emerald-800/60'
           }`}
         >
           {error || aviso}
@@ -196,9 +199,9 @@ export default function GestionInstalaciones() {
       )}
 
       {/* ---------- Instalaciones ---------- */}
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
+      <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <h2 className="text-lg font-bold text-[#1c2333]">Talleres y laboratorios</h2>
+          <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">Talleres y laboratorios</h2>
           <button
             onClick={() => (abiertoInst ? cerrarFormInst() : setAbiertoInst(true))}
             className={claseBotonPrimario}
@@ -206,15 +209,15 @@ export default function GestionInstalaciones() {
             {abiertoInst ? 'Cancelar' : '+ Agregar instalación'}
           </button>
         </div>
-        <p className="text-xs text-[#5d6678] mb-4">
+        <p className="text-xs text-[#5d6678] dark:text-slate-400 mb-4">
           Las instalaciones inactivas no aparecen a los alumnos, pero conservan sus resultados.
         </p>
 
         {abiertoInst && (
-          <form onSubmit={guardarInstalacion} className="p-4 rounded-xl border border-[#e2e6ef] bg-[#f4f6fb] mb-6">
+          <form onSubmit={guardarInstalacion} className="p-4 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800/70 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-[#1c2333]">Nombre</label>
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Nombre</label>
                 <input
                   maxLength={100}
                   value={formInst.nombre}
@@ -223,7 +226,7 @@ export default function GestionInstalaciones() {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-[#1c2333]">Tipo</label>
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Tipo</label>
                 <input
                   maxLength={50}
                   placeholder="Laboratorio, Taller, Centro de Cómputo..."
@@ -233,7 +236,7 @@ export default function GestionInstalaciones() {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-[#1c2333]">Carrera</label>
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Carrera</label>
                 <select
                   aria-label="Carrera asignada a la instalación"
                   value={formInst.carrera}
@@ -253,7 +256,7 @@ export default function GestionInstalaciones() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-[#1c2333]">Descripción (opcional)</label>
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Descripción (opcional)</label>
                 <input
                   value={formInst.descripcion}
                   onChange={(e) => setFormInst({ ...formInst, descripcion: e.target.value })}
@@ -272,7 +275,7 @@ export default function GestionInstalaciones() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-[#e2e6ef] text-[#5d6678] uppercase tracking-wider">
+              <tr className="border-b border-[#e2e6ef] dark:border-slate-800 text-[#5d6678] dark:text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-3 font-semibold">Nombre</th>
                 <th className="py-3 px-3 font-semibold">Tipo</th>
                 <th className="py-3 px-3 font-semibold">Carrera</th>
@@ -281,23 +284,23 @@ export default function GestionInstalaciones() {
                 <th className="py-3 px-3 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e2e6ef]">
+            <tbody className="divide-y divide-[#e2e6ef] dark:divide-slate-800">
               {instalaciones.map((i) => (
-                <tr key={i.id} className="hover:bg-[#f4f6fb]/50 transition-colors">
-                  <td className="py-3 px-3 font-medium text-[#1c2333]">{i.nombre}</td>
-                  <td className="py-3 px-3 text-[#1c2333]">{i.tipo}</td>
+                <tr key={i.id} className="hover:bg-[#f4f6fb]/50 dark:hover:bg-slate-800/60 transition-colors">
+                  <td className="py-3 px-3 font-medium text-[#1c2333] dark:text-slate-100">{i.nombre}</td>
+                  <td className="py-3 px-3 text-[#1c2333] dark:text-slate-200">{i.tipo}</td>
                   <td className="py-3 px-3">
                     <span
                       className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
                         i.carrera
-                          ? 'bg-[#e3f4f2] text-[#0f766e]'
-                          : 'bg-[#f4f6fb] text-[#5d6678]'
+                          ? 'bg-[#e3f4f2] text-[#0f766e] dark:bg-teal-500/15 dark:text-teal-300'
+                          : 'bg-[#f4f6fb] text-[#5d6678] dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       {i.carrera || 'General'}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-[#5d6678]">{i.descripcion}</td>
+                  <td className="py-3 px-3 text-[#5d6678] dark:text-slate-400">{i.descripcion}</td>
                   <td className="py-3 px-3">
                     <Estado activa={i.activa} />
                   </td>
@@ -317,7 +320,7 @@ export default function GestionInstalaciones() {
               ))}
               {(cargando || instalaciones.length === 0) && (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-[#5d6678]">
+                  <td colSpan={6} className="py-8 text-center text-[#5d6678] dark:text-slate-400">
                     {cargando ? 'Cargando...' : 'No hay instalaciones registradas.'}
                   </td>
                 </tr>
@@ -328,9 +331,9 @@ export default function GestionInstalaciones() {
       </div>
 
       {/* ---------- Preguntas ---------- */}
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
+      <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <h2 className="text-lg font-bold text-[#1c2333]">Preguntas de instalaciones</h2>
+          <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">Preguntas de instalaciones</h2>
           <div className="flex gap-2 flex-wrap">
             <select value={filtro} onChange={(e) => setFiltro(e.target.value)} className={`${claseInput} font-semibold`}>
               <option value="todas">Todas las preguntas</option>
@@ -349,16 +352,16 @@ export default function GestionInstalaciones() {
             </button>
           </div>
         </div>
-        <p className="text-xs text-[#5d6678] mb-4">
+        <p className="text-xs text-[#5d6678] dark:text-slate-400 mb-4">
           Las preguntas no se eliminan, solo se desactivan, para no perder las respuestas ya registradas. Escala
           0, 2.5, 5, 7.5 y 10.
         </p>
 
         {abiertoPreg && (
-          <form onSubmit={guardarPregunta} className="p-4 rounded-xl border border-[#e2e6ef] bg-[#f4f6fb] mb-6">
+          <form onSubmit={guardarPregunta} className="p-4 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800/70 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-[#1c2333]">Aplica a</label>
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Aplica a</label>
                 <select
                   value={formPreg.idInstalacion}
                   onChange={(e) => setFormPreg({ ...formPreg, idInstalacion: e.target.value })}
@@ -373,7 +376,7 @@ export default function GestionInstalaciones() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-[#1c2333]">Dimensión</label>
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Dimensión</label>
                 <select
                   value={formPreg.dimension}
                   onChange={(e) => setFormPreg({ ...formPreg, dimension: e.target.value as Dimension })}
@@ -387,7 +390,7 @@ export default function GestionInstalaciones() {
                 </select>
               </div>
               <div className="flex flex-col gap-1 sm:col-span-3">
-                <label className="text-[11px] font-semibold text-[#1c2333]">Pregunta</label>
+                <label className="text-[11px] font-semibold text-[#1c2333] dark:text-slate-200">Pregunta</label>
                 <input
                   value={formPreg.texto}
                   onChange={(e) => setFormPreg({ ...formPreg, texto: e.target.value })}
@@ -406,7 +409,7 @@ export default function GestionInstalaciones() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-[#e2e6ef] text-[#5d6678] uppercase tracking-wider">
+              <tr className="border-b border-[#e2e6ef] dark:border-slate-800 text-[#5d6678] dark:text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-3 font-semibold">Aplica a</th>
                 <th className="py-3 px-3 font-semibold">Dimensión</th>
                 <th className="py-3 px-3 font-semibold">Pregunta</th>
@@ -414,16 +417,16 @@ export default function GestionInstalaciones() {
                 <th className="py-3 px-3 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e2e6ef]">
+            <tbody className="divide-y divide-[#e2e6ef] dark:divide-slate-800">
               {preguntasVisibles.map((p) => (
-                <tr key={p.id} className="hover:bg-[#f4f6fb]/50 transition-colors">
-                  <td className="py-3 px-3 text-[#1c2333]">{nombreInstalacion(p.idInstalacion)}</td>
+                <tr key={p.id} className="hover:bg-[#f4f6fb]/50 dark:hover:bg-slate-800/60 transition-colors">
+                  <td className="py-3 px-3 text-[#1c2333] dark:text-slate-200">{nombreInstalacion(p.idInstalacion)}</td>
                   <td className="py-3 px-3">
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#e3f4f2] text-[#0f766e] text-[11px] font-semibold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#e3f4f2] dark:bg-teal-500/15 text-[#0f766e] dark:text-teal-300 text-[11px] font-semibold">
                       {p.dimension}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-[#1c2333]">{p.texto}</td>
+                  <td className="py-3 px-3 text-[#1c2333] dark:text-slate-200">{p.texto}</td>
                   <td className="py-3 px-3">
                     <Estado activa={p.activa} />
                   </td>
@@ -445,7 +448,7 @@ export default function GestionInstalaciones() {
               ))}
               {(cargando || preguntasVisibles.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[#5d6678]">
+                  <td colSpan={5} className="py-8 text-center text-[#5d6678] dark:text-slate-400">
                     {cargando ? 'Cargando...' : 'No se encontraron preguntas.'}
                   </td>
                 </tr>
