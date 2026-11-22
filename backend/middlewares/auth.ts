@@ -27,7 +27,7 @@ export const verificarToken = (req: AuthRequest, res: Response, next: NextFuncti
       return;
     }
 
-    const decoded = jwt.verify(token, secret);
+    const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
     req.user = decoded; // Guardamos la info decodificada en req.user
     next();
   } catch (error) {

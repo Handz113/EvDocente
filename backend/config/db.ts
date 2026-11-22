@@ -6,7 +6,10 @@ import { Pool } from 'pg';
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+      ssl:
+        process.env.DB_SSL === 'false'
+          ? false
+          : { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' },
     })
   : new Pool({
       user: process.env.DB_USER,

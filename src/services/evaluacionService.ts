@@ -185,6 +185,25 @@ export function obtenerMateriasAlumnoAPI(token: string) {
   return peticion<{ periodo: PeriodoItem | null; materias: MateriaItem[] }>('/alumno/materias', {}, token)
 }
 
+export interface PreguntaDocenteAPI extends PreguntaItem {
+  id_pregunta: number
+  texto_pregunta: string
+  dimension: string
+}
+
+/** GET /api/evaluaciones/preguntas — preguntas dinámicas del cuestionario docente */
+export async function obtenerPreguntasDocenteAPI(token: string): Promise<PreguntaDocenteAPI[]> {
+  const filas = await peticion<any[]>('/evaluaciones/preguntas', {}, token)
+  return filas.map((r) => ({
+    id_pregunta: Number(r.id_pregunta ?? r.id),
+    texto_pregunta: String(r.texto_pregunta ?? r.texto ?? ''),
+    dimension: String(r.dimension ?? r.categoria ?? 'Evaluación Docente'),
+    id: Number(r.id_pregunta ?? r.id),
+    texto: String(r.texto_pregunta ?? r.texto ?? ''),
+    categoria: String(r.dimension ?? r.categoria ?? 'Evaluación Docente'),
+  }))
+}
+
 /** POST /api/evaluaciones */
 export function enviarEvaluacionAPI(
   crn: number | string,

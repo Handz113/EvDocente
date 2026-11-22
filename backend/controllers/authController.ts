@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db';
+import { enviarCorreoRecuperacion } from '../services/mailer';
 
 // El frontend maneja las áreas en minúsculas; la BD usa los nombres de la tabla Rol.
 const AREA_A_ROL: Record<string, string> = {
@@ -100,5 +101,175 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     console.error('Error en login:', error);
     res.status(500).json({ mensaje: 'Error interno del servidor al iniciar sesión.' });
+  }
+};
+
+/**
+ * POST /api/auth/recuperar-password
+ * Body: { correo }
+ * Extrae el correo, valida su existencia en la tabla Usuario de PostgreSQL.
+ * Si no existe, devuelve HTTP 404.
+ * Si existe, genera un JWT temporal con expiración de 15 minutos ({ expiresIn: '15m' }),
+ * llama a enviarCorreoRecuperacion(correo, token) y devuelve HTTP 200.
+ */
+export const solicitarRecuperacion = async (req: Request, res: Response): Promise<void> => {
+  const { correo } = req.body ?? {};
+
+  if (!correo || typeof correo !== 'string' || !correo.trim()) {
+    res.status(400).json({ mensaje: 'El correo electrónico es requerido.' });
+    return;
+  }
+
+  const correoLimpio = correo.trim().toLowerCase();
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error('JWT_SECRET no está definido en las variables de entorno.');
+    res.status(500).json({ mensaje: 'Error interno del servidor.' });
+    return;
+  }
+
+  try {
+    let user: any = null;
+
+    try {
+      const result = await pool.query(
+        'SELECT id_usuario, correo_institucional, contrasena FROM Usuario WHERE LOWER(correo_institucional) = $1 LIMIT 1',
+        [correoLimpio]
+      );
+      user = result.rows[0];
+    } catch (dbErr: any) {
+      // Fallback si la columna se llama correo en lugar de correo_institucional
+      if (dbErr?.message && dbErr.message.includes('correo_institucional')) {
+        const result = await pool.query(
+          'SELECT id_usuario, correo, contrasena FROM Usuario WHERE LOWER(correo) = $1 LIMIT 1',
+          [correoLimpio]
+        );
+        user = result.rows[0];
+      } else {
+        throw dbErr;
+      }
+    }
+
+    if (!user) {
+      res.status(200).json({
+        mensaje: 'Si el correo está registrado, recibirás un enlace de recuperación.',
+      });
+      return;
+    }
+
+    const resetSecret = secret + user.contrasena;
+    const token = jwt.sign(
+      {
+        id_usuario: user.id_usuario,
+        correo: user.correo_institucional || user.correo || correoLimpio,
+        accion: 'recuperar-password',
+      },
+      resetSecret,
+      { expiresIn: '15m', algorithm: 'HS256' }
+    );
+
+    await enviarCorreoRecuperacion(correoLimpio, token);
+
+    res.status(200).json({
+      mensaje: 'Si el correo está registrado, recibirás un enlace de recuperación.',
+    });
+  } catch (error) {
+    console.error('Error en solicitarRecuperacion:', error);
+    res.status(500).json({
+      mensaje: 'Error interno del servidor al procesar la recuperación de contraseña.',
+    });
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Body: { token, nuevaContrasena }
+ * Valida el token JWT de recuperación (de un solo uso y alcance aislado), cifra la nueva contraseña con bcrypt
+ * y actualiza el registro del usuario en la base de datos PostgreSQL.
+ */
+export const restablecerPassword = async (req: Request, res: Response): Promise<void> => {
+  const { token, nuevaContrasena } = req.body ?? {};
+
+  if (!token || typeof token !== 'string') {
+    res.status(400).json({ mensaje: 'El token de recuperación es requerido.' });
+    return;
+  }
+
+  if (!nuevaContrasena || typeof nuevaContrasena !== 'string' || nuevaContrasena.trim().length < 6) {
+    res.status(400).json({
+      mensaje: 'La nueva contraseña debe tener al menos 6 caracteres.',
+    });
+    return;
+  }
+
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error('JWT_SECRET no está definido en las variables de entorno.');
+    res.status(500).json({ mensaje: 'Error interno del servidor.' });
+    return;
+  }
+
+  try {
+    const preDecoded = jwt.decode(token) as { id_usuario?: number; accion?: string } | null;
+    if (!preDecoded || !preDecoded.id_usuario || preDecoded.accion !== 'recuperar-password') {
+      res.status(401).json({
+        mensaje: 'El enlace de recuperación es inválido o está corrupto.',
+      });
+      return;
+    }
+
+    const userResult = await pool.query(
+      'SELECT id_usuario, contrasena FROM Usuario WHERE id_usuario = $1 LIMIT 1',
+      [preDecoded.id_usuario]
+    );
+    const user = userResult.rows[0];
+
+    if (!user) {
+      res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      return;
+    }
+
+    const resetSecret = secret + user.contrasena;
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, resetSecret, { algorithms: ['HS256'] });
+    } catch (jwtErr: any) {
+      if (jwtErr?.name === 'TokenExpiredError') {
+        res.status(401).json({
+          mensaje: 'El enlace de recuperación ha expirado. Por favor solicita uno nuevo.',
+        });
+        return;
+      }
+      res.status(401).json({
+        mensaje: 'El enlace de recuperación es inválido, está corrupto o ya fue utilizado.',
+      });
+      return;
+    }
+
+    if (!decoded || !decoded.id_usuario || decoded.accion !== 'recuperar-password') {
+      res.status(400).json({ mensaje: 'Token de recuperación no válido para este usuario.' });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(nuevaContrasena, salt);
+
+    const result = await pool.query(
+      'UPDATE Usuario SET contrasena = $1 WHERE id_usuario = $2 RETURNING id_usuario',
+      [hashedPassword, decoded.id_usuario]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      return;
+    }
+
+    res.status(200).json({ mensaje: 'Contraseña restablecida exitosamente.' });
+  } catch (error) {
+    console.error('Error en restablecerPassword:', error);
+    res.status(500).json({
+      mensaje: 'Error interno del servidor al restablecer la contraseña.',
+    });
   }
 };
