@@ -384,3 +384,77 @@ export function editarPeriodoAPI(
     token
   );
 }
+
+// ==========================================================
+// 6. BITÁCORA DE AUDITORÍA (HU21 — SOLO LECTURA)
+// ==========================================================
+
+export interface RegistroBitacora {
+  id_bitacora: number;
+  id_usuario: number | null;
+  numero_cuenta: string | null;
+  nombre_usuario: string | null;
+  correo_institucional?: string | null;
+  rol: string | null;
+  accion: string;
+  entidad: string;
+  id_entidad: string | null;
+  detalle: string | null;
+  ip_origen: string | null;
+  fecha_hora: string;
+}
+
+export interface FiltrosBitacora {
+  busqueda?: string;
+  accion?: string;
+  entidad?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  pagina?: number;
+  limite?: number;
+}
+
+export interface RespuestaBitacora {
+  registros: RegistroBitacora[];
+  total: number;
+  pagina: number;
+  limite: number;
+  totalPaginas: number;
+  accionesDisponibles: string[];
+  entidadesDisponibles: string[];
+}
+
+/** GET /api/admin/bitacora — consulta paginada y filtrable (exclusiva para Administrador) */
+export function obtenerBitacoraAPI(
+  token: string,
+  filtros: FiltrosBitacora = {}
+): Promise<RespuestaBitacora> {
+  const params = new URLSearchParams();
+
+  if (filtros.busqueda && filtros.busqueda.trim()) {
+    params.set('busqueda', filtros.busqueda.trim());
+  }
+  if (filtros.accion && filtros.accion.trim()) {
+    params.set('accion', filtros.accion.trim());
+  }
+  if (filtros.entidad && filtros.entidad.trim()) {
+    params.set('entidad', filtros.entidad.trim());
+  }
+  if (filtros.fechaInicio && filtros.fechaInicio.trim()) {
+    params.set('fechaInicio', filtros.fechaInicio.trim());
+  }
+  if (filtros.fechaFin && filtros.fechaFin.trim()) {
+    params.set('fechaFin', filtros.fechaFin.trim());
+  }
+  if (filtros.pagina && filtros.pagina > 0) {
+    params.set('pagina', String(filtros.pagina));
+  }
+  if (filtros.limite && filtros.limite > 0) {
+    params.set('limite', String(filtros.limite));
+  }
+
+  const queryString = params.toString();
+  const ruta = queryString ? `/admin/bitacora?${queryString}` : '/admin/bitacora';
+
+  return fetchAdmin<RespuestaBitacora>(ruta, { method: 'GET' }, token);
+}

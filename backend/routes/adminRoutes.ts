@@ -18,6 +18,7 @@ import {
   editarCiclo,
 } from '../controllers/adminCatalogoController';
 import { listarCiclos } from '../controllers/cicloController';
+import { obtenerBitacoraAuditoria } from '../controllers/adminController';
 import { verificarToken, verificarRol } from '../middlewares/auth';
 
 const router = Router();
@@ -57,5 +58,8 @@ router.get('/periodos', ...soloAdmin, listarCiclos);
 router.post('/periodos', ...soloAdmin, crearCiclo);
 router.patch('/periodos/:id/activo', ...soloAdmin, toggleCicloActivo);
 router.patch('/periodos/:id', ...soloAdmin, editarCiclo);
+
+// 6. Bitácora de Auditoría (HU21 — solo lectura, inmutable, exclusiva para Administrador)
+router.get('/bitacora', ...soloAdmin, obtenerBitacoraAuditoria);
 
 export default router;
