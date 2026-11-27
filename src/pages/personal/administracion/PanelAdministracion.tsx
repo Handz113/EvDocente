@@ -48,6 +48,14 @@ interface MateriaFila extends MateriaAdmin {
   clave_unica: string
 }
 
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
 export default function PanelAdministracion() {
   const { usuario } = useAuth()
   const token = usuario?.token || ''
@@ -64,6 +72,7 @@ export default function PanelAdministracion() {
   // Registro que se está editando (null = formulario de edición cerrado)
   const [usuarioEditando, setUsuarioEditando] = useState<UsuarioFila | null>(null)
   const [periodoEditando, setPeriodoEditando] = useState<PeriodoAdmin | null>(null)
+  const [mostrarTodosDocentes, setMostrarTodosDocentes] = useState(false)
 
   const cargarUsuarios = useCallback(async () => {
     if (!token) return
@@ -522,6 +531,18 @@ export default function PanelAdministracion() {
           ]}
           filas={listaDocentes}
           clave="id_docente"
+          placeholderBusqueda="Buscar docente, depto. o cuenta..."
+          camposBusqueda={[
+            'nombre_completo',
+            'nombre',
+            'apellido',
+            'departamento',
+            'numero_cuenta',
+            'correo_institucional',
+          ]}
+          limiteColapsado={10}
+          mostrarTodos={mostrarTodosDocentes}
+          onToggleMostrarTodos={() => setMostrarTodosDocentes((prev) => !prev)}
           onAgregar={handleAgregarDocente}
           onEliminar={handleEliminarDocente}
         />
@@ -677,6 +698,15 @@ interface CatalogoProps<T> {
   nota?: string
   /** Contenido que se muestra justo arriba de la tabla (p. ej. el formulario de edición) */
   encabezado?: ReactNode
+  /** Texto placeholder personalizado del buscador */
+  placeholderBusqueda?: string
+  /** Campos específicos a evaluar en el buscador (insensible a mayúsculas y acentos) */
+  camposBusqueda?: (keyof T & string)[]
+  /** Si se define, colapsa el listado inicialmente a N registros tras filtrar */
+  limiteColapsado?: number
+  /** Estado controlado para expandir/colapsar el listado */
+  mostrarTodos?: boolean
+  onToggleMostrarTodos?: () => void
 }
 
 function Catalogo<T extends Record<string, any>>({
@@ -689,6 +719,11 @@ function Catalogo<T extends Record<string, any>>({
   extra,
   nota,
   encabezado,
+  placeholderBusqueda = 'Buscar registros...',
+  camposBusqueda,
+  limiteColapsado,
+  mostrarTodos = false,
+  onToggleMostrarTodos,
 }: CatalogoProps<T>) {
   const editables = columnas.filter((c) => !c.soloLectura)
   const columnasTabla = columnas.filter((c) => !c.ocultarEnTabla)
@@ -701,9 +736,23 @@ function Catalogo<T extends Record<string, any>>({
   const [busqueda, setBusqueda] = useState('')
   const [error, setError] = useState('')
 
-  const visibles = filas.filter((f) =>
-    JSON.stringify(f).toLowerCase().includes(busqueda.toLowerCase())
-  )
+  const terminoBusqueda = normalizarTexto(busqueda)
+
+  const filtrados = filas.filter((f) => {
+    if (!terminoBusqueda) return true
+    if (camposBusqueda && camposBusqueda.length > 0) {
+      return camposBusqueda.some((campo) =>
+        normalizarTexto(String(f[campo] ?? '')).includes(terminoBusqueda)
+      )
+    }
+    return normalizarTexto(JSON.stringify(f)).includes(terminoBusqueda)
+  })
+
+  const colapsable = Boolean(limiteColapsado && limiteColapsado > 0 && onToggleMostrarTodos)
+  const visibles =
+    colapsable && !mostrarTodos && limiteColapsado
+      ? filtrados.slice(0, limiteColapsado)
+      : filtrados
 
   const guardar = (e: FormEvent) => {
     e.preventDefault()
@@ -727,23 +776,58 @@ function Catalogo<T extends Record<string, any>>({
 
   return (
     <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <h2 className="text-lg font-bold text-[#1c2333]">{titulo}</h2>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <input
-            type="text"
-            placeholder="Buscar registros..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs w-full sm:w-56 focus:border-[#0f766e]"
-          />
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-[#1c2333]">{titulo}</h2>
+          {colapsable && filtrados.length > 0 && (
+            <p className="text-xs text-[#5d6678] mt-0.5">
+              Mostrando <strong className="text-[#1c2333]">{visibles.length}</strong> de{' '}
+              <strong className="text-[#1c2333]">{filtrados.length}</strong> registros
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              aria-label={placeholderBusqueda}
+              placeholder={placeholderBusqueda}
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className={`w-full px-3.5 py-2 ${
+                busqueda ? 'pr-8' : ''
+              } rounded-xl border border-[#e2e6ef] bg-white text-xs text-[#1c2333] placeholder:text-[#5d6678]/70 focus:border-[#0f766e] focus:outline-none`}
+            />
+            {busqueda && (
+              <button
+                type="button"
+                onClick={() => setBusqueda('')}
+                aria-label="Limpiar búsqueda"
+                title="Limpiar búsqueda"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] hover:text-[#1c2333] hover:bg-[#f4f6fb] text-xs font-bold cursor-pointer"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          {colapsable && limiteColapsado && filtrados.length > limiteColapsado && (
+            <button
+              type="button"
+              onClick={onToggleMostrarTodos}
+              className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 bg-[#e3f4f2] hover:bg-[#0f766e] text-[#0f766e] hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+            >
+              {mostrarTodos
+                ? `Mostrar menos (${limiteColapsado})`
+                : `Ver todos (${filtrados.length})`}
+            </button>
+          )}
           <button
             onClick={() => {
               if (!abierto) setNuevo(vacio)
               setAbierto(!abierto)
               setError('')
             }}
-            className="px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0f766e] hover:bg-[#0c5c56] text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap cursor-pointer"
           >
             {abierto ? 'Cancelar' : '+ Agregar'}
           </button>

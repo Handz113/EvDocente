@@ -42,6 +42,14 @@ function acortarEtiqueta(texto: string, max = 18): string {
   return texto.length > max ? `${texto.slice(0, max - 1)}…` : texto
 }
 
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
 function calcularPorcentaje(respondieron: number, total: number): number {
   return total > 0 ? Math.round((respondieron / total) * 1000) / 10 : 0
 }
@@ -105,6 +113,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
   const [crn, setCrn] = useState('todas')
   const [estado, setEstado] = useState<'todos' | 'respondio' | 'pendiente'>('todos')
   const [busqueda, setBusqueda] = useState('')
+  const [mostrarTodosAlumnos, setMostrarTodosAlumnos] = useState(false)
   const [modoGrafico, setModoGrafico] = useState<'carrera' | 'materia'>('carrera')
   const [carreraGrafico, setCarreraGrafico] = useState<string>('todas')
   const [materiaGrafico, setMateriaGrafico] = useState<string>('')
@@ -128,7 +137,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
   }, [usuario?.token, refresco])
 
   const materias = [...new Map(filas.map((f) => [f.crn, f])).values()]
-  const texto = busqueda.trim().toLowerCase()
+  const texto = normalizarTexto(busqueda)
 
   const carrerasDisponibles = useMemo(
     () => [...new Set(filas.map((f) => f.carrera).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')),
@@ -346,15 +355,19 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
     }
   }, [filas, resumen, modoGrafico, carreraGrafico, materiaGrafico])
 
-  const visibles = filas.filter(
+  const alumnosFiltrados = filas.filter(
     (f) =>
       (crn === 'todas' || f.crn === crn) &&
       (estado === 'todos' || f.respondio === (estado === 'respondio')) &&
-      (!texto || f.matricula.toLowerCase().includes(texto) || f.correo.toLowerCase().includes(texto))
+      (!texto ||
+        normalizarTexto(f.matricula).includes(texto) ||
+        normalizarTexto(f.correo).includes(texto))
   )
 
+  const alumnosVisibles = mostrarTodosAlumnos ? alumnosFiltrados : alumnosFiltrados.slice(0, 10)
+
   const claseFiltro =
-    'px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]'
+    'w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]'
 
   return (
     <>
@@ -581,9 +594,9 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
       </div>
 
       <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-2">
           <h2 className="text-lg font-bold text-[#1c2333]">Participación de alumnos</h2>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <select value={crn} onChange={(e) => setCrn(e.target.value)} className={claseFiltro}>
               <option value="todas">Todas las materias</option>
               {materias.map((m) => (
@@ -603,20 +616,56 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
               <option value="pendiente">Pendiente</option>
             </select>
 
-            <input
-              type="text"
-              placeholder="Buscar matrícula o correo..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="px-3.5 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs w-full sm:w-56 focus:border-[#0f766e]"
-            />
+            <div className="relative w-full sm:w-56">
+              <input
+                type="text"
+                aria-label="Buscar matrícula o correo"
+                placeholder="Buscar matrícula o correo..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className={`w-full px-3.5 py-2 ${
+                  busqueda ? 'pr-8' : ''
+                } rounded-xl border border-[#e2e6ef] bg-white text-xs text-[#1c2333] placeholder:text-[#5d6678]/70 focus:border-[#0f766e] focus:outline-none`}
+              />
+              {busqueda && (
+                <button
+                  type="button"
+                  onClick={() => setBusqueda('')}
+                  aria-label="Limpiar búsqueda de alumnos"
+                  title="Limpiar búsqueda"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] hover:text-[#1c2333] hover:bg-[#f4f6fb] text-xs font-bold cursor-pointer"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            {alumnosFiltrados.length > 10 && (
+              <button
+                type="button"
+                onClick={() => setMostrarTodosAlumnos((prev) => !prev)}
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 bg-[#e3f4f2] hover:bg-[#0f766e] text-[#0f766e] hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+              >
+                {mostrarTodosAlumnos
+                  ? 'Mostrar menos (10)'
+                  : `Ver todos (${alumnosFiltrados.length})`}
+              </button>
+            )}
           </div>
         </div>
 
-        <p className="text-xs text-[#5d6678] mb-4">
-          Solo se muestra si el alumno respondió. Las calificaciones y comentarios son anónimos y no se
-          vinculan con el alumno.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <p className="text-xs text-[#5d6678]">
+            Solo se muestra si el alumno respondió. Las calificaciones y comentarios son anónimos y no se
+            vinculan con el alumno.
+          </p>
+          {!cargando && alumnosFiltrados.length > 0 && (
+            <span className="text-[11px] font-medium text-[#5d6678]">
+              Mostrando <strong className="text-[#1c2333]">{alumnosVisibles.length}</strong> de{' '}
+              <strong className="text-[#1c2333]">{alumnosFiltrados.length}</strong> registros
+            </span>
+          )}
+        </div>
 
         {error && (
           <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mb-4">{error}</p>
@@ -634,7 +683,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e2e6ef]">
-              {visibles.map((f) => (
+              {alumnosVisibles.map((f) => (
                 <tr key={`${f.matricula}-${f.crn}`} className="hover:bg-[#f4f6fb]/60 transition-colors">
                   <td className="py-3 px-3 font-medium text-[#1c2333]">{f.matricula}</td>
                   <td className="py-3 px-3 text-[#5d6678]">{f.correo}</td>
@@ -655,7 +704,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                   </td>
                 </tr>
               ))}
-              {(cargando || visibles.length === 0) && (
+              {(cargando || alumnosFiltrados.length === 0) && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-[#5d6678]">
                     {cargando ? 'Cargando...' : 'No se encontraron registros.'}
