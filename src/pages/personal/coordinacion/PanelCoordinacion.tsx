@@ -65,6 +65,14 @@ function acortarEtiqueta(texto: string, max = 18): string {
   return texto.length > max ? `${texto.slice(0, max - 1)}…` : texto
 }
 
+function normalizarTexto(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
 function colorBarraCoordinacion(item: DatoGraficoCoordinacion): string {
   if (item.tipo === 'institucional') return '#0f766e'
   if (item.evaluaciones === 0 && item.promedio === 0) return '#cbd5e1'
@@ -124,6 +132,8 @@ export default function PanelCoordinacion() {
   const [cicloSeleccionado, setCicloSeleccionado] = useState<string>('')
   const [area, setArea] = useState('todas')
   const [orden, setOrden] = useState<'mayor' | 'menor'>('mayor')
+  const [busquedaDocente, setBusquedaDocente] = useState('')
+  const [mostrarTodosDocentes, setMostrarTodosDocentes] = useState(false)
   const [seleccionId, setSeleccionId] = useState<string | null>(null)
   const [listaDocentes, setListaDocentes] = useState<DocenteConMetricas[]>([])
   const [error, setError] = useState('')
@@ -351,8 +361,19 @@ export default function PanelCoordinacion() {
 
   const areasDisponibles = [...new Set(listaDocentes.map((r) => r.area))]
 
-  const listaFiltrada = listaDocentes
-    .filter((r) => area === 'todas' || r.area === area)
+  const listaPorArea = listaDocentes.filter((r) => area === 'todas' || r.area === area)
+
+  const terminoBusquedaDocente = normalizarTexto(busquedaDocente)
+
+  const docentesFiltrados = listaPorArea
+    .filter((r) => {
+      if (!terminoBusquedaDocente) return true
+      return (
+        normalizarTexto(r.nombre).includes(terminoBusquedaDocente) ||
+        normalizarTexto(r.area).includes(terminoBusquedaDocente) ||
+        normalizarTexto(r.correo ?? '').includes(terminoBusquedaDocente)
+      )
+    })
     .sort((a, b) => {
       // Los docentes sin evaluaciones van al final en ambos órdenes
       if (a.promedio === null) return 1
@@ -360,11 +381,15 @@ export default function PanelCoordinacion() {
       return orden === 'mayor' ? b.promedio - a.promedio : a.promedio - b.promedio
     })
 
-  const totalRespuestas = listaFiltrada.reduce((a, r) => a + r.totalEvaluaciones, 0)
+  const docentesVisibles = mostrarTodosDocentes
+    ? docentesFiltrados
+    : docentesFiltrados.slice(0, 10)
+
+  const totalRespuestas = listaPorArea.reduce((a, r) => a + r.totalEvaluaciones, 0)
   const promedioGeneral = totalRespuestas
-    ? listaFiltrada.reduce((a, r) => a + (r.promedio ?? 0) * r.totalEvaluaciones, 0) / totalRespuestas
+    ? listaPorArea.reduce((a, r) => a + (r.promedio ?? 0) * r.totalEvaluaciones, 0) / totalRespuestas
     : 0
-  const enRiesgo = listaFiltrada.filter((r) => r.promedio !== null && r.promedio < 7.0).length
+  const enRiesgo = listaPorArea.filter((r) => r.promedio !== null && r.promedio < 7.0).length
 
   const totalRespuestasInst = listaDocentes.reduce((a, r) => a + r.totalEvaluaciones, 0)
   const promedioInstitucional = totalRespuestasInst
@@ -726,7 +751,7 @@ export default function PanelCoordinacion() {
 
         <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
           <div className="text-3xl font-extrabold text-[#0f766e]">
-            {listaFiltrada.length}
+            {listaPorArea.length}
           </div>
           <div className="text-xs font-semibold text-[#5d6678] mt-1">Docentes Monitoreados</div>
         </div>
@@ -907,14 +932,47 @@ export default function PanelCoordinacion() {
 
       {/* Tabla con Filtros */}
       <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
-          <h2 className="text-lg font-bold text-[#1c2333]">Evaluación por Docente</h2>
-          <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#1c2333]">Evaluación por Docente</h2>
+            {docentesFiltrados.length > 0 && (
+              <p className="text-xs text-[#5d6678] mt-0.5">
+                Mostrando <strong className="text-[#1c2333]">{docentesVisibles.length}</strong> de{' '}
+                <strong className="text-[#1c2333]">{docentesFiltrados.length}</strong> docente
+                {docentesFiltrados.length === 1 ? '' : 's'}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+            <div className="relative w-full sm:w-60">
+              <input
+                type="text"
+                aria-label="Buscar docente por nombre, área o correo"
+                placeholder="Buscar docente, área o correo..."
+                value={busquedaDocente}
+                onChange={(e) => setBusquedaDocente(e.target.value)}
+                className={`w-full px-3.5 py-2 ${
+                  busquedaDocente ? 'pr-8' : ''
+                } rounded-xl border border-[#e2e6ef] bg-white text-xs text-[#1c2333] placeholder:text-[#5d6678]/70 focus:border-[#0f766e] focus:outline-none`}
+              />
+              {busquedaDocente && (
+                <button
+                  type="button"
+                  onClick={() => setBusquedaDocente('')}
+                  aria-label="Limpiar búsqueda de docentes"
+                  title="Limpiar búsqueda"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] hover:text-[#1c2333] hover:bg-[#f4f6fb] text-xs font-bold cursor-pointer"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
             {ciclos.length > 0 && (
               <select
                 value={cicloSeleccionado}
                 onChange={(e) => setCicloSeleccionado(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+                className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
               >
                 {ciclos.map((c) => (
                   <option key={c.id_ciclo} value={String(c.id_ciclo)}>
@@ -927,7 +985,7 @@ export default function PanelCoordinacion() {
             <select
               value={area}
               onChange={(e) => setArea(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+              className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
             >
               <option value="todas">Todas las áreas</option>
               {areasDisponibles.map((a) => (
@@ -938,11 +996,23 @@ export default function PanelCoordinacion() {
             <select
               value={orden}
               onChange={(e) => setOrden(e.target.value as 'mayor' | 'menor')}
-              className="px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
+              className="w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]"
             >
               <option value="mayor">Mayor promedio</option>
               <option value="menor">Menor promedio</option>
             </select>
+
+            {docentesFiltrados.length > 10 && (
+              <button
+                type="button"
+                onClick={() => setMostrarTodosDocentes((prev) => !prev)}
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 bg-[#e3f4f2] hover:bg-[#0f766e] text-[#0f766e] hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+              >
+                {mostrarTodosDocentes
+                  ? 'Mostrar menos (10)'
+                  : `Ver todos (${docentesFiltrados.length})`}
+              </button>
+            )}
           </div>
         </div>
 
@@ -959,7 +1029,7 @@ export default function PanelCoordinacion() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e2e6ef]">
-              {listaFiltrada.map((r) => (
+              {docentesVisibles.map((r) => (
                 <tr key={r.id} className="hover:bg-[#f4f6fb]/60 transition-colors">
                   <td className="py-3 px-3 font-medium text-[#1c2333]">{r.nombre}</td>
                   <td className="py-3 px-3">
@@ -994,6 +1064,15 @@ export default function PanelCoordinacion() {
                   </td>
                 </tr>
               ))}
+              {docentesFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-[#5d6678]">
+                    {busquedaDocente.trim()
+                      ? 'No se encontraron docentes que coincidan con la búsqueda.'
+                      : 'No hay docentes registrados en el ciclo seleccionado.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

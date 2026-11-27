@@ -8,6 +8,7 @@ CREATE TABLE Instalacion (
     nombre VARCHAR(100) NOT NULL UNIQUE,
     tipo VARCHAR(50) NOT NULL,
     descripcion TEXT,
+    carrera VARCHAR(150) DEFAULT NULL,
     activa BOOLEAN DEFAULT TRUE
 );
 
@@ -43,10 +44,10 @@ CREATE TABLE RespuestaInstalacion (
     UNIQUE (id_evaluacion_instalacion, id_pregunta_instalacion)
 );
 
--- Datos de ejemplo
-INSERT INTO Instalacion (nombre, tipo, descripcion) VALUES
-('Centro de Cómputo', 'Centro de Cómputo', 'Equipos de cómputo y red para prácticas'),
-('Laboratorio Clínico', 'Laboratorio', 'Instalación para prácticas de análisis clínicos');
+-- Datos de ejemplo (carrera NULL = instalación general/compartida para todas las carreras)
+INSERT INTO Instalacion (nombre, tipo, descripcion, carrera) VALUES
+('Centro de Cómputo', 'Centro de Cómputo', 'Equipos de cómputo y red para prácticas', NULL),
+('Laboratorio Clínico', 'Laboratorio', 'Instalación para prácticas de análisis clínicos', NULL);
 
 INSERT INTO PreguntaInstalacion (id_instalacion, dimension, texto) VALUES
 (NULL, 'Equipamiento', 'El equipo y los materiales funcionan correctamente.'),

@@ -56,13 +56,24 @@ export default function TalleresAlumno() {
             className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
           >
             <div>
-              <span
-                className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full mb-3 ${
-                  i.evaluada ? 'bg-[#e7f6ec] text-[#15803d]' : 'bg-[#fff4e5] text-[#d97706]'
-                }`}
-              >
-                {i.evaluada ? '✓ Evaluada' : 'Pendiente'}
-              </span>
+              <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                <span
+                  className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                    i.evaluada ? 'bg-[#e7f6ec] text-[#15803d]' : 'bg-[#fff4e5] text-[#d97706]'
+                  }`}
+                >
+                  {i.evaluada ? '✓ Evaluada' : 'Pendiente'}
+                </span>
+                <span
+                  className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                    i.carrera
+                      ? 'bg-[#e8eefc] text-[#2557d6]'
+                      : 'bg-[#f4f6fb] text-[#5d6678]'
+                  }`}
+                >
+                  {i.carrera || 'General'}
+                </span>
+              </div>
               <h3 className="text-base font-bold text-[#1c2333] mb-1">{i.nombre}</h3>
               <p className="text-xs text-[#5d6678] mb-2 font-mono">{i.tipo}</p>
               {i.descripcion && <p className="text-sm text-[#5d6678] mb-5">{i.descripcion}</p>}

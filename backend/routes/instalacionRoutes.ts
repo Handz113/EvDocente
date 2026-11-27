@@ -5,6 +5,7 @@ import {
   crearEvaluacionInstalacion,
   obtenerResultadosInstalaciones,
   obtenerCatalogo,
+  listarCarrerasInstalaciones,
   crearInstalacion,
   actualizarInstalacion,
   crearPregunta,
@@ -18,6 +19,9 @@ const router = Router();
 
 /** GET /api/instalaciones/resultados[?id_ciclo=] — resultados anónimos por instalación */
 router.get('/resultados', verificarToken, verificarRol(['Coordinador', 'Administrador']), obtenerResultadosInstalaciones);
+
+/** GET /api/instalaciones/carreras — carreras disponibles en Alumno */
+router.get('/carreras', verificarToken, verificarRol(['Coordinador', 'Administrador']), listarCarrerasInstalaciones);
 
 /** GET /api/instalaciones/catalogo — instalaciones y preguntas, incluidas inactivas */
 router.get('/catalogo', verificarToken, verificarRol(['Administrador']), obtenerCatalogo);

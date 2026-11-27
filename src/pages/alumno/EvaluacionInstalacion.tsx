@@ -22,6 +22,7 @@ export default function EvaluacionInstalacion() {
   const [respuestas, setRespuestas] = useState<Record<number, number>>({})
   const [comentario, setComentario] = useState('')
   const [error, setError] = useState('')
+  const [accesoRestringido, setAccesoRestringido] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [enviando, setEnviando] = useState(false)
 
@@ -37,9 +38,13 @@ export default function EvaluacionInstalacion() {
         setInstalacion(data.instalacion)
         setPreguntas(data.preguntas)
         setEvaluada(data.evaluada)
+        setAccesoRestringido(false)
       })
       .catch((err) => {
         if (err instanceof ErrorAPI && err.status === 401) return sesionVencida()
+        if (err instanceof ErrorAPI && err.status === 403) {
+          setAccesoRestringido(true)
+        }
         setError(err.message)
       })
       .finally(() => setCargando(false))
@@ -55,7 +60,9 @@ export default function EvaluacionInstalacion() {
 
   if (!instalacion || evaluada || preguntas.length === 0) {
     const titulo = !instalacion
-      ? 'No se pudo cargar la instalación'
+      ? accesoRestringido
+        ? 'Acceso restringido'
+        : 'No se pudo cargar la instalación'
       : evaluada
         ? 'Instalación ya evaluada'
         : 'Sin preguntas activas'
@@ -117,7 +124,18 @@ export default function EvaluacionInstalacion() {
     <Layout titulo="Alumno" tono="alumno">
       <form onSubmit={enviar} className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-[#1c2333] mb-1">{instalacion.nombre}</h1>
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold text-[#1c2333]">{instalacion.nombre}</h1>
+            <span
+              className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                instalacion.carrera
+                  ? 'bg-[#e8eefc] text-[#2557d6]'
+                  : 'bg-[#f4f6fb] text-[#5d6678]'
+              }`}
+            >
+              {instalacion.carrera || 'General'}
+            </span>
+          </div>
           <p className="text-sm text-[#5d6678]">
             {instalacion.tipo}
             {instalacion.descripcion ? ` · ${instalacion.descripcion}` : ''}
