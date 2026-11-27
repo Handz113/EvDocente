@@ -5,6 +5,7 @@ import pool from '../config/db';
 import { AuthRequest } from '../middlewares/auth';
 import { calcularClasificacionDocente } from './evaluacionController';
 import { obtenerResultadosDocente } from './docenteController';
+import { registrarAuditoria } from '../services/auditoriaService';
 
 interface AreaOportunidadItem {
   idPregunta: number;
@@ -375,6 +376,16 @@ export const descargarReporteDocentePDF = async (req: AuthRequest, res: Response
       areasOportunidad,
     });
 
+    await registrarAuditoria({
+      idUsuario: req.user?.id_usuario ?? null,
+      rol: req.user?.rol ?? 'Docente',
+      accion: 'EXPORTAR_REPORTE',
+      entidad: 'Reporte',
+      idEntidad: idCicloFiltro ?? null,
+      detalle: `Exportación de reporte docente en formato PDF (ciclo: ${nombreCiclo}).`,
+      req,
+    });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=reporte-evaluacion.pdf');
     res.setHeader('Content-Length', String(pdfBuffer.length));
@@ -703,7 +714,17 @@ export const descargarReporteCoordinacionPDF = async (req: AuthRequest, res: Res
           ) / 100
         : null;
 
-    // 6. Construir y enviar PDF como stream de descarga
+    // 6. Registrar exportación en auditoría y enviar PDF como stream de descarga
+    await registrarAuditoria({
+      idUsuario: req.user?.id_usuario ?? null,
+      rol: req.user?.rol ?? null,
+      accion: 'EXPORTAR_REPORTE',
+      entidad: 'Reporte',
+      idEntidad: idCiclo,
+      detalle: `Exportación de reporte directivo en formato PDF (ciclo: ${nombreCiclo}; filtro: ${etiquetaFiltro}).`,
+      req,
+    });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
@@ -1275,6 +1296,16 @@ export const descargarReporteCoordinacionExcel = async (req: AuthRequest, res: R
       });
     }
 
+    await registrarAuditoria({
+      idUsuario: req.user?.id_usuario ?? null,
+      rol: req.user?.rol ?? null,
+      accion: 'EXPORTAR_REPORTE',
+      entidad: 'Reporte',
+      idEntidad: datos.idCiclo,
+      detalle: `Exportación de reporte en formato Excel (ciclo: ${datos.nombreCiclo}; filtro: ${datos.etiquetaFiltro}).`,
+      req,
+    });
+
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -1326,6 +1357,16 @@ export const descargarReporteCoordinacionCSV = async (req: AuthRequest, res: Res
     });
 
     const contenidoCSV = cabecera + lineas.join('\n');
+
+    await registrarAuditoria({
+      idUsuario: req.user?.id_usuario ?? null,
+      rol: req.user?.rol ?? null,
+      accion: 'EXPORTAR_REPORTE',
+      entidad: 'Reporte',
+      idEntidad: datos.idCiclo,
+      detalle: `Exportación de reporte en formato CSV (ciclo: ${datos.nombreCiclo}; filtro: ${datos.etiquetaFiltro}).`,
+      req,
+    });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=reporte.csv');

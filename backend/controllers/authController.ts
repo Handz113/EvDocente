@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db';
 import { enviarCorreoRecuperacion } from '../services/mailer';
+import { registrarAuditoria } from '../services/auditoriaService';
 
 // El frontend maneja las áreas en minúsculas; la BD usa los nombres de la tabla Rol.
 const AREA_A_ROL: Record<string, string> = {
@@ -42,6 +43,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    const cuentaIntentada = String(usuario).trim();
     const { rows } = await pool.query(
       `SELECT u.id_usuario, u.numero_cuenta, u.contrasena, u.activo, r.nombre AS rol,
               a.id_alumno, d.id_docente, d.nombre AS docente_nombre, d.apellido AS docente_apellido
@@ -51,23 +53,55 @@ export const login = async (req: Request, res: Response): Promise<void> => {
        LEFT JOIN Docente d ON d.id_usuario = u.id_usuario
        WHERE LOWER(u.numero_cuenta) = LOWER($1) OR LOWER(u.correo_institucional) = LOWER($1)
        LIMIT 1`,
-      [String(usuario).trim()]
+      [cuentaIntentada]
     );
 
     const user = rows[0];
     // Mismo mensaje para usuario inexistente o contraseña incorrecta (no revelar cuál falló)
     const valida = user ? await bcrypt.compare(String(contrasena), user.contrasena) : false;
     if (!user || !valida) {
+      await registrarAuditoria({
+        idUsuario: user?.id_usuario ?? null,
+        numeroCuenta: user?.numero_cuenta ?? cuentaIntentada,
+        rol: user?.rol ?? null,
+        accion: 'LOGIN_FALLIDO',
+        entidad: 'Sesion',
+        idEntidad: user?.id_usuario ?? null,
+        detalle: user
+          ? `Intento fallido de inicio de sesión en área ${area} (credenciales incorrectas).`
+          : `Intento fallido de inicio de sesión en área ${area} para cuenta no registrada.`,
+        req,
+      });
       res.status(401).json({ mensaje: 'Usuario o contraseña incorrectos.' });
       return;
     }
 
     if (!user.activo) {
+      await registrarAuditoria({
+        idUsuario: user.id_usuario,
+        numeroCuenta: user.numero_cuenta,
+        rol: user.rol,
+        accion: 'LOGIN_FALLIDO',
+        entidad: 'Sesion',
+        idEntidad: user.id_usuario,
+        detalle: `Intento fallido de inicio de sesión en área ${area}: cuenta desactivada.`,
+        req,
+      });
       res.status(403).json({ mensaje: 'La cuenta está desactivada. Contacta a administración.' });
       return;
     }
 
     if (user.rol !== rolEsperado) {
+      await registrarAuditoria({
+        idUsuario: user.id_usuario,
+        numeroCuenta: user.numero_cuenta,
+        rol: user.rol,
+        accion: 'LOGIN_FALLIDO',
+        entidad: 'Sesion',
+        idEntidad: user.id_usuario,
+        detalle: `Intento fallido de inicio de sesión: cuenta con rol ${user.rol} intentó acceder al área ${area}.`,
+        req,
+      });
       res.status(403).json({ mensaje: `Esta cuenta no pertenece al área de ${area}.` });
       return;
     }
@@ -87,6 +121,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           : user.rol === 'Coordinador'
             ? 'Coordinación Académica'
             : 'Administración';
+
+    await registrarAuditoria({
+      idUsuario: user.id_usuario,
+      numeroCuenta: user.numero_cuenta,
+      rol: user.rol,
+      accion: 'LOGIN_EXITOSO',
+      entidad: 'Sesion',
+      idEntidad: user.id_usuario,
+      detalle: `Inicio de sesión exitoso en el área de ${area}.`,
+      req,
+    });
 
     res.json({
       token,
@@ -152,6 +197,15 @@ export const solicitarRecuperacion = async (req: Request, res: Response): Promis
     }
 
     if (!user) {
+      await registrarAuditoria({
+        idUsuario: null,
+        numeroCuenta: correoLimpio,
+        rol: null,
+        accion: 'SOLICITUD_RESET_PASSWORD',
+        entidad: 'Sesion',
+        detalle: 'Solicitud de recuperación de contraseña para un correo no registrado.',
+        req,
+      });
       res.status(200).json({
         mensaje: 'Si el correo está registrado, recibirás un enlace de recuperación.',
       });
@@ -170,6 +224,15 @@ export const solicitarRecuperacion = async (req: Request, res: Response): Promis
     );
 
     await enviarCorreoRecuperacion(correoLimpio, token);
+
+    await registrarAuditoria({
+      idUsuario: user.id_usuario,
+      accion: 'SOLICITUD_RESET_PASSWORD',
+      entidad: 'Sesion',
+      idEntidad: user.id_usuario,
+      detalle: 'Solicitud de recuperación de contraseña procesada y enlace enviado por correo.',
+      req,
+    });
 
     res.status(200).json({
       mensaje: 'Si el correo está registrado, recibirás un enlace de recuperación.',
@@ -264,6 +327,15 @@ export const restablecerPassword = async (req: Request, res: Response): Promise<
       res.status(404).json({ mensaje: 'Usuario no encontrado.' });
       return;
     }
+
+    await registrarAuditoria({
+      idUsuario: decoded.id_usuario,
+      accion: 'RESET_PASSWORD',
+      entidad: 'Sesion',
+      idEntidad: decoded.id_usuario,
+      detalle: 'Contraseña restablecida exitosamente mediante enlace de recuperación.',
+      req,
+    });
 
     res.status(200).json({ mensaje: 'Contraseña restablecida exitosamente.' });
   } catch (error) {

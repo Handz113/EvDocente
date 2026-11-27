@@ -306,3 +306,28 @@ VALUES (
         'Ingeniería en Sistemas',
         7
     );
+
+-- =========================
+-- TABLA BITÁCORA DE AUDITORÍA (HU21)
+-- =========================
+CREATE TABLE IF NOT EXISTS BitacoraAuditoria (
+    id_bitacora SERIAL PRIMARY KEY,
+    id_usuario INTEGER NULL REFERENCES Usuario (id_usuario) ON DELETE SET NULL,
+    numero_cuenta VARCHAR(50) NULL,
+    rol VARCHAR(30) NULL,
+    accion VARCHAR(60) NOT NULL,
+    entidad VARCHAR(60) NOT NULL,
+    id_entidad VARCHAR(60) NULL,
+    detalle TEXT NULL,
+    ip_origen VARCHAR(64) NULL,
+    fecha_hora TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bitacora_fecha_hora
+    ON BitacoraAuditoria (fecha_hora DESC);
+
+CREATE INDEX IF NOT EXISTS idx_bitacora_usuario
+    ON BitacoraAuditoria (id_usuario);
+
+CREATE INDEX IF NOT EXISTS idx_bitacora_accion_entidad
+    ON BitacoraAuditoria (accion, entidad);

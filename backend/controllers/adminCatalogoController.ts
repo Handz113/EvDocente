@@ -2,6 +2,14 @@ import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import pool from '../config/db';
 import { AuthRequest } from '../middlewares/auth';
+import { registrarAuditoria } from '../services/auditoriaService';
+
+const NOMBRE_ROL_POR_ID: Record<number, string> = {
+  1: 'Administrador',
+  2: 'Coordinador',
+  3: 'Docente',
+  4: 'Alumno',
+};
 
 const ROL_POR_NOMBRE: Record<string, number> = {
   administrador: 1,
@@ -103,7 +111,16 @@ export const crearUsuario = async (req: AuthRequest, res: Response): Promise<voi
       [String(numero_cuenta).trim(), String(correo_institucional).trim().toLowerCase(), hashContrasena, rolFinal]
     );
 
-    res.status(201).json(rows[0]);
+    const usuarioCreado = rows[0];
+    await registrarAuditoria({
+      accion: 'CREAR',
+      entidad: 'Usuario',
+      idEntidad: usuarioCreado.id_usuario,
+      detalle: `Usuario ${usuarioCreado.numero_cuenta} (${usuarioCreado.correo_institucional}) creado con rol ${NOMBRE_ROL_POR_ID[usuarioCreado.id_rol] || `ID ${usuarioCreado.id_rol}`}.`,
+      req,
+    });
+
+    res.status(201).json(usuarioCreado);
   } catch (error: any) {
     if (error?.code === '23505') {
       res.status(409).json({
@@ -165,6 +182,14 @@ export const toggleUsuarioActivo = async (req: AuthRequest, res: Response): Prom
       res.status(404).json({ mensaje: 'Usuario no encontrado.' });
       return;
     }
+
+    await registrarAuditoria({
+      accion: activo ? 'ACTIVAR' : 'DESACTIVAR',
+      entidad: 'Usuario',
+      idEntidad: rows[0].id_usuario,
+      detalle: `Cuenta ${rows[0].numero_cuenta} ${activo ? 'activada' : 'desactivada'}.`,
+      req,
+    });
 
     res.status(200).json(rows[0]);
   } catch (error) {
@@ -253,6 +278,19 @@ export const editarUsuario = async (req: AuthRequest, res: Response): Promise<vo
       res.status(404).json({ mensaje: 'Usuario no encontrado.' });
       return;
     }
+
+    const cambiosUsuario: string[] = [];
+    if (traeCuenta) cambiosUsuario.push(`cuenta -> ${rows[0].numero_cuenta}`);
+    if (traeCorreo) cambiosUsuario.push(`correo -> ${rows[0].correo_institucional}`);
+    if (traeContrasena) cambiosUsuario.push('contraseña actualizada');
+
+    await registrarAuditoria({
+      accion: 'ACTUALIZAR',
+      entidad: 'Usuario',
+      idEntidad: rows[0].id_usuario,
+      detalle: `Usuario ${rows[0].numero_cuenta} actualizado (${cambiosUsuario.join(', ')}).`,
+      req,
+    });
 
     res.status(200).json(rows[0]);
   } catch (error: any) {
@@ -412,6 +450,14 @@ export const crearDocente = async (req: AuthRequest, res: Response): Promise<voi
     const d = docenteInsert.rows[0];
     const u = usuarioDatos.rows[0] ?? {};
 
+    await registrarAuditoria({
+      accion: 'CREAR',
+      entidad: 'Docente',
+      idEntidad: d.id_docente,
+      detalle: `Docente ${d.nombre} ${d.apellido} (${u.numero_cuenta || `usuario #${d.id_usuario}`}) registrado en departamento ${d.departamento}.`,
+      req,
+    });
+
     res.status(201).json({
       id_docente: d.id_docente,
       id_usuario: d.id_usuario,
@@ -454,7 +500,11 @@ export const eliminarDocente = async (req: AuthRequest, res: Response): Promise<
 
   try {
     const existe = await pool.query(
-      'SELECT id_docente, id_usuario FROM Docente WHERE id_docente = $1 LIMIT 1;',
+      `SELECT d.id_docente, d.id_usuario, d.nombre, d.apellido, u.numero_cuenta
+       FROM Docente d
+       LEFT JOIN Usuario u ON u.id_usuario = d.id_usuario
+       WHERE d.id_docente = $1
+       LIMIT 1;`,
       [id]
     );
 
@@ -463,8 +513,19 @@ export const eliminarDocente = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    const docInfo = existe.rows[0];
+    const etiquetaDocente = `${docInfo.nombre} ${docInfo.apellido}`.trim() +
+      (docInfo.numero_cuenta ? ` (${docInfo.numero_cuenta})` : '');
+
     try {
       await pool.query('DELETE FROM Docente WHERE id_docente = $1;', [id]);
+      await registrarAuditoria({
+        accion: 'ELIMINAR',
+        entidad: 'Docente',
+        idEntidad: id,
+        detalle: `Docente ${etiquetaDocente} eliminado del catálogo.`,
+        req,
+      });
       res.status(200).json({
         mensaje: 'Docente eliminado correctamente.',
         bajaLogica: false,
@@ -476,6 +537,13 @@ export const eliminarDocente = async (req: AuthRequest, res: Response): Promise<
           'UPDATE Usuario SET activo = FALSE WHERE id_usuario = (SELECT id_usuario FROM Docente WHERE id_docente = $1);',
           [id]
         );
+        await registrarAuditoria({
+          accion: 'DESACTIVAR',
+          entidad: 'Docente',
+          idEntidad: id,
+          detalle: `Baja lógica del docente ${etiquetaDocente} (cuenta desactivada por tener CRNs o evaluaciones asociadas).`,
+          req,
+        });
         res.status(200).json({
           mensaje:
             'El docente cuenta con CRNs o evaluaciones asociadas; se realizó la baja lógica desactivando su usuario.',
@@ -564,6 +632,14 @@ export const crearMateria = async (req: AuthRequest, res: Response): Promise<voi
 
     const materiaCreada = rows[0];
 
+    await registrarAuditoria({
+      accion: 'CREAR',
+      entidad: 'Materia',
+      idEntidad: materiaCreada.id_materia,
+      detalle: `Materia ${materiaCreada.clave} - ${materiaCreada.nombre} (${materiaCreada.creditos} créditos) creada.`,
+      req,
+    });
+
     // Si además se proporcionan datos de CRN y docente, se crea la asignación en CRN
     if (crn && id_docente) {
       let cicloId = id_ciclo ? Number(id_ciclo) : null;
@@ -580,6 +656,14 @@ export const crearMateria = async (req: AuthRequest, res: Response): Promise<voi
          RETURNING id_crn, crn, id_docente, id_ciclo;`,
         [Number(id_docente), materiaCreada.id_materia, cicloId, Number(crn)]
       );
+
+      await registrarAuditoria({
+        accion: 'CREAR',
+        entidad: 'CRN',
+        idEntidad: crnInsert.rows[0].id_crn,
+        detalle: `CRN ${crnInsert.rows[0].crn} creado para materia ${materiaCreada.clave} - ${materiaCreada.nombre} (docente ID ${id_docente}, ciclo ID ${cicloId}).`,
+        req,
+      });
 
       res.status(201).json({
         ...materiaCreada,
@@ -621,32 +705,58 @@ export const eliminarMateriaCRN = async (req: AuthRequest, res: Response): Promi
   try {
     // 1. Buscar si el identificador corresponde a un registro en CRN (por id_crn o número de crn)
     const crnCheck = await pool.query(
-      'SELECT id_crn, id_materia FROM CRN WHERE id_crn = $1 OR crn = $1 LIMIT 1;',
+      `SELECT c.id_crn, c.crn, c.id_materia, m.clave, m.nombre
+       FROM CRN c
+       LEFT JOIN Materia m ON m.id_materia = c.id_materia
+       WHERE c.id_crn = $1 OR c.crn = $1
+       LIMIT 1;`,
       [id]
     );
 
     if (crnCheck.rowCount && crnCheck.rowCount > 0) {
-      const { id_crn, id_materia } = crnCheck.rows[0];
+      const { id_crn, crn, id_materia, clave, nombre } = crnCheck.rows[0];
       await pool.query('DELETE FROM CRN WHERE id_crn = $1;', [id_crn]);
 
       // Si la materia ya no tiene ningún otro CRN asociado, intentar eliminar también la Materia
       const otrosCrn = await pool.query('SELECT 1 FROM CRN WHERE id_materia = $1 LIMIT 1;', [
         id_materia,
       ]);
-      if (otrosCrn.rowCount === 0) {
+      const eliminoMateria = otrosCrn.rowCount === 0;
+      if (eliminoMateria) {
         await pool.query('DELETE FROM Materia WHERE id_materia = $1;', [id_materia]);
       }
+
+      const etiquetaMat = clave && nombre ? `${clave} - ${nombre}` : `materia #${id_materia}`;
+      await registrarAuditoria({
+        accion: 'ELIMINAR',
+        entidad: 'CRN',
+        idEntidad: id_crn,
+        detalle: `CRN ${crn} (${etiquetaMat}) eliminado${eliminoMateria ? ' junto con la materia sin asignaciones' : ''}.`,
+        req,
+      });
 
       res.status(200).json({ mensaje: 'Materia / CRN eliminado correctamente.' });
       return;
     }
 
     // 2. Si no era un CRN, intentar eliminar directamente de la tabla Materia por id_materia
-    const materiaDel = await pool.query('DELETE FROM Materia WHERE id_materia = $1;', [id]);
+    const materiaDel = await pool.query(
+      'DELETE FROM Materia WHERE id_materia = $1 RETURNING id_materia, clave, nombre;',
+      [id]
+    );
     if (materiaDel.rowCount === 0) {
       res.status(404).json({ mensaje: 'Materia o CRN no encontrado.' });
       return;
     }
+
+    const matEliminada = materiaDel.rows[0];
+    await registrarAuditoria({
+      accion: 'ELIMINAR',
+      entidad: 'Materia',
+      idEntidad: matEliminada.id_materia,
+      detalle: `Materia ${matEliminada.clave} - ${matEliminada.nombre} eliminada.`,
+      req,
+    });
 
     res.status(200).json({ mensaje: 'Materia eliminada correctamente.' });
   } catch (error: any) {
@@ -712,6 +822,13 @@ export const crearPregunta = async (req: AuthRequest, res: Response): Promise<vo
         [textoFinal, dimensionFinal]
       );
       const fila = rows[0];
+      await registrarAuditoria({
+        accion: 'CREAR',
+        entidad: 'Pregunta',
+        idEntidad: fila.id_pregunta,
+        detalle: `Pregunta creada (${dimensionFinal}): "${textoFinal.slice(0, 120)}${textoFinal.length > 120 ? '…' : ''}".`,
+        req,
+      });
       res.status(201).json({
         ...fila,
         texto: fila.texto ?? fila.texto_pregunta,
@@ -734,6 +851,13 @@ export const crearPregunta = async (req: AuthRequest, res: Response): Promise<vo
           [numeroFinal, textoFinal]
         );
         const fila = rows[0];
+        await registrarAuditoria({
+          accion: 'CREAR',
+          entidad: 'Pregunta',
+          idEntidad: fila.id_pregunta,
+          detalle: `Pregunta #${numeroFinal} creada (${dimensionFinal}): "${textoFinal.slice(0, 120)}${textoFinal.length > 120 ? '…' : ''}".`,
+          req,
+        });
         res.status(201).json({
           ...fila,
           texto: fila.texto,
@@ -768,8 +892,8 @@ export const eliminarPregunta = async (req: AuthRequest, res: Response): Promise
   }
 
   try {
-    const { rowCount } = await pool.query(
-      'DELETE FROM Pregunta WHERE id_pregunta = $1;',
+    const { rows, rowCount } = await pool.query(
+      'DELETE FROM Pregunta WHERE id_pregunta = $1 RETURNING *;',
       [id]
     );
 
@@ -777,6 +901,15 @@ export const eliminarPregunta = async (req: AuthRequest, res: Response): Promise
       res.status(404).json({ mensaje: 'Pregunta no encontrada.' });
       return;
     }
+
+    const textoEliminado = String(rows[0]?.texto ?? rows[0]?.texto_pregunta ?? '').trim();
+    await registrarAuditoria({
+      accion: 'ELIMINAR',
+      entidad: 'Pregunta',
+      idEntidad: id,
+      detalle: `Pregunta #${id} eliminada${textoEliminado ? `: "${textoEliminado.slice(0, 120)}${textoEliminado.length > 120 ? '…' : ''}"` : ''}.`,
+      req,
+    });
 
     res.status(200).json({ mensaje: 'Pregunta eliminada correctamente.' });
   } catch (error: any) {
@@ -827,6 +960,14 @@ export const crearCiclo = async (req: AuthRequest, res: Response): Promise<void>
       [String(nombre).trim(), fechaInicio, fechaCierre, esActivo]
     );
 
+    await registrarAuditoria({
+      accion: 'CREAR',
+      entidad: 'CicloEscolar',
+      idEntidad: rows[0].id_ciclo,
+      detalle: `Ciclo escolar "${rows[0].nombre}" creado (apertura: ${fechaInicio}, cierre: ${fechaCierre}, estado: ${esActivo ? 'Activo' : 'Cerrado'}).`,
+      req,
+    });
+
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error al crear ciclo escolar:', error);
@@ -865,6 +1006,14 @@ export const toggleCicloActivo = async (req: AuthRequest, res: Response): Promis
       res.status(404).json({ mensaje: 'Ciclo escolar no encontrado.' });
       return;
     }
+
+    await registrarAuditoria({
+      accion: activo ? 'ACTIVAR' : 'DESACTIVAR',
+      entidad: 'CicloEscolar',
+      idEntidad: rows[0].id_ciclo,
+      detalle: `Ciclo escolar "${rows[0].nombre}" ${activo ? 'habilitado como ciclo activo' : 'marcado como cerrado'}.`,
+      req,
+    });
 
     res.status(200).json(rows[0]);
   } catch (error) {
@@ -918,7 +1067,8 @@ export const editarCiclo = async (req: AuthRequest, res: Response): Promise<void
 
   try {
     const actual = await pool.query(
-      `SELECT to_char(fecha_inicio_eval, 'YYYY-MM-DD') AS inicio,
+      `SELECT nombre,
+              to_char(fecha_inicio_eval, 'YYYY-MM-DD') AS inicio,
               to_char(fecha_cierre_eval, 'YYYY-MM-DD') AS cierre
        FROM CicloEscolar
        WHERE id_ciclo = $1;`,
@@ -953,6 +1103,27 @@ export const editarCiclo = async (req: AuthRequest, res: Response): Promise<void
       res.status(404).json({ mensaje: 'Ciclo escolar no encontrado.' });
       return;
     }
+
+    const cambiosCiclo: string[] = [];
+    if (traeNombre && rows[0].nombre !== actual.rows[0].nombre) {
+      cambiosCiclo.push(`nombre: "${actual.rows[0].nombre}" -> "${rows[0].nombre}"`);
+    }
+    if (traeInicio && inicioFinal !== actual.rows[0].inicio) {
+      cambiosCiclo.push(`apertura: ${actual.rows[0].inicio} -> ${inicioFinal}`);
+    }
+    if (traeCierre && cierreFinal !== actual.rows[0].cierre) {
+      cambiosCiclo.push(`cierre: ${actual.rows[0].cierre} -> ${cierreFinal}`);
+    }
+
+    await registrarAuditoria({
+      accion: 'ACTUALIZAR',
+      entidad: 'CicloEscolar',
+      idEntidad: rows[0].id_ciclo,
+      detalle: `Ciclo escolar "${rows[0].nombre}" actualizado${
+        cambiosCiclo.length > 0 ? ` (${cambiosCiclo.join(', ')})` : ''
+      }.`,
+      req,
+    });
 
     res.status(200).json(rows[0]);
   } catch (error) {

@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import pool from '../config/db';
 import { AuthRequest } from '../middlewares/auth';
 import { motivoPeriodoCerrado } from '../services/periodoEvaluacion';
+import { registrarAuditoria } from '../services/auditoriaService';
 
 // =========================
 // MÓDULO TALLERES Y LABORATORIOS
@@ -582,6 +583,13 @@ export const crearInstalacion = async (req: AuthRequest, res: Response): Promise
         carreraNorm.valor,
       ]
     );
+    await registrarAuditoria({
+      accion: 'CREAR',
+      entidad: 'Instalacion',
+      idEntidad: rows[0].id_instalacion,
+      detalle: `Instalación "${rows[0].nombre}" (${rows[0].tipo}) creada${rows[0].carrera ? ` para carrera ${rows[0].carrera}` : ' (todas las carreras)'}.`,
+      req,
+    });
     res.status(201).json({ mensaje: 'Instalación creada.', instalacion: mapearInstalacion(rows[0]) });
   } catch (error: any) {
     if (error?.code === '23505') {
@@ -675,6 +683,31 @@ export const actualizarInstalacion = async (req: AuthRequest, res: Response): Pr
       res.status(404).json({ mensaje: 'La instalación no existe.' });
       return;
     }
+
+    const soloToggleEstado =
+      activaVal !== null &&
+      nombreVal === null &&
+      tipoVal === null &&
+      descripcion === undefined &&
+      !actualizarCarrera;
+
+    const camposInst: string[] = [];
+    if (nombreVal !== null) camposInst.push(`nombre -> "${rows[0].nombre}"`);
+    if (tipoVal !== null) camposInst.push(`tipo -> "${rows[0].tipo}"`);
+    if (descripcion !== undefined) camposInst.push('descripción actualizada');
+    if (actualizarCarrera) camposInst.push(`carrera -> ${rows[0].carrera ?? 'Todas las carreras'}`);
+    if (activaVal !== null) camposInst.push(`estado -> ${rows[0].activa ? 'Activa' : 'Inactiva'}`);
+
+    await registrarAuditoria({
+      accion: soloToggleEstado ? (activaVal ? 'ACTIVAR' : 'DESACTIVAR') : 'ACTUALIZAR',
+      entidad: 'Instalacion',
+      idEntidad: rows[0].id_instalacion,
+      detalle: soloToggleEstado
+        ? `Instalación "${rows[0].nombre}" ${activaVal ? 'activada' : 'desactivada'}.`
+        : `Instalación "${rows[0].nombre}" actualizada (${camposInst.join(', ')}).`,
+      req,
+    });
+
     res.json({ mensaje: 'Instalación actualizada.', instalacion: mapearInstalacion(rows[0]) });
   } catch (error: any) {
     if (error?.code === '23505') {
@@ -730,6 +763,14 @@ export const crearPregunta = async (req: AuthRequest, res: Response): Promise<vo
        RETURNING id_pregunta_instalacion, id_instalacion, dimension, texto, activa`,
       [instalacion.valor, dimension, texto.trim()]
     );
+    const textoPreg = String(rows[0].texto ?? '');
+    await registrarAuditoria({
+      accion: 'CREAR',
+      entidad: 'Pregunta',
+      idEntidad: rows[0].id_pregunta_instalacion,
+      detalle: `Pregunta de taller/laboratorio creada (${rows[0].dimension}${rows[0].id_instalacion ? `, instalación #${rows[0].id_instalacion}` : ', general'}): "${textoPreg.slice(0, 100)}${textoPreg.length > 100 ? '…' : ''}".`,
+      req,
+    });
     res.status(201).json({ mensaje: 'Pregunta creada.', pregunta: mapearPregunta(rows[0]) });
   } catch (error) {
     console.error('Error al crear pregunta de instalación:', error);
@@ -809,6 +850,21 @@ export const actualizarPregunta = async (req: AuthRequest, res: Response): Promi
       res.status(404).json({ mensaje: 'La pregunta no existe.' });
       return;
     }
+    const soloTogglePreg =
+      activaVal !== null &&
+      dimensionVal === null &&
+      textoVal === null &&
+      id_instalacion === undefined;
+
+    await registrarAuditoria({
+      accion: soloTogglePreg ? (activaVal ? 'ACTIVAR' : 'DESACTIVAR') : 'ACTUALIZAR',
+      entidad: 'Pregunta',
+      idEntidad: rows[0].id_pregunta_instalacion,
+      detalle: soloTogglePreg
+        ? `Pregunta de taller/laboratorio #${rows[0].id_pregunta_instalacion} (${rows[0].dimension}) ${activaVal ? 'activada' : 'desactivada'}.`
+        : `Pregunta de taller/laboratorio #${rows[0].id_pregunta_instalacion} (${rows[0].dimension}) actualizada.`,
+      req,
+    });
     res.json({ mensaje: 'Pregunta actualizada.', pregunta: mapearPregunta(rows[0]) });
   } catch (error) {
     console.error('Error al actualizar pregunta de instalación:', error);

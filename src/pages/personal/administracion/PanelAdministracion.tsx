@@ -3,6 +3,7 @@ import Layout from '../../../components/Layout'
 import ParticipacionAlumnos from '../../../components/ParticipacionAlumnos'
 import GestionInstalaciones from '../../../components/GestionInstalaciones'
 import ResultadosInstalaciones from '../../../components/ResultadosInstalaciones'
+import BitacoraAuditoria from '../../../components/BitacoraAuditoria'
 import { useAuth } from '../../../context/AuthContext'
 import {
   obtenerUsuariosAPI,
@@ -38,6 +39,7 @@ const pestañas = [
   { id: 'periodos', nombre: 'Periodos' },
   { id: 'participacion', nombre: 'Participación' },
   { id: 'instalaciones', nombre: 'Talleres y Labs' },
+  { id: 'bitacora', nombre: 'Bitácora' },
 ]
 
 interface UsuarioFila extends UsuarioAdmin {
@@ -673,6 +675,9 @@ export default function PanelAdministracion() {
           <ResultadosInstalaciones area="administracion" />
         </>
       )}
+
+      {/* Bitácora de auditoría: solo lectura e inmutable (HU21) */}
+      {activa === 'bitacora' && <BitacoraAuditoria />}
     </Layout>
   )
 }
