@@ -12,6 +12,7 @@ import {
   type TooltipContentProps,
 } from 'recharts'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { useNavigate } from '../router'
 import {
   obtenerParticipacionAPI,
@@ -54,13 +55,13 @@ function calcularPorcentaje(respondieron: number, total: number): number {
   return total > 0 ? Math.round((respondieron / total) * 1000) / 10 : 0
 }
 
-function colorBarraParticipacion(item: DatoGraficoParticipacion): string {
-  if (item.tipo === 'general') return '#0f766e'
-  if (item.total === 0) return '#cbd5e1'
-  if (item.porcentaje >= 80) return '#0d9488'
-  if (item.porcentaje >= 50) return '#14b8a6'
-  if (item.porcentaje > 0) return '#d97706'
-  return '#dc2626'
+function colorBarraParticipacion(item: DatoGraficoParticipacion, isDark = false): string {
+  if (item.tipo === 'general') return isDark ? '#10b981' : '#0f766e'
+  if (item.total === 0) return isDark ? '#475569' : '#cbd5e1'
+  if (item.porcentaje >= 80) return isDark ? '#14b8a6' : '#0d9488'
+  if (item.porcentaje >= 50) return isDark ? '#2dd4bf' : '#14b8a6'
+  if (item.porcentaje > 0) return isDark ? '#f59e0b' : '#d97706'
+  return isDark ? '#ef4444' : '#dc2626'
 }
 
 function TooltipParticipacion({ active, payload }: TooltipContentProps) {
@@ -70,32 +71,32 @@ function TooltipParticipacion({ active, payload }: TooltipContentProps) {
 
   const badgeClase =
     item.porcentaje >= 50
-      ? 'bg-[#e3f4f2] text-[#0f766e]'
+      ? 'bg-[#e3f4f2] text-[#0f766e] dark:bg-teal-500/15 dark:text-teal-300'
       : item.porcentaje > 0
-      ? 'bg-[#fef3c7] text-[#b45309]'
-      : 'bg-[#fee2e2] text-[#dc2626]'
+      ? 'bg-[#fef3c7] text-[#b45309] dark:bg-amber-500/15 dark:text-amber-300'
+      : 'bg-[#fee2e2] text-[#dc2626] dark:bg-red-500/15 dark:text-red-300'
 
   return (
-    <div className="bg-white border border-[#e2e6ef] rounded-xl p-3 shadow-md max-w-xs text-xs">
+    <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-700 rounded-xl p-3 shadow-md max-w-xs text-xs">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <span className="font-bold text-[#1c2333] leading-snug">{item.nombre}</span>
+        <span className="font-bold text-[#1c2333] dark:text-slate-100 leading-snug">{item.nombre}</span>
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${badgeClase}`}>
           {item.porcentaje.toFixed(1)}%
         </span>
       </div>
-      {item.subtitulo && <p className="text-[11px] text-[#5d6678] mb-1.5">{item.subtitulo}</p>}
-      <div className="space-y-0.5 pt-1.5 border-t border-[#e2e6ef]">
+      {item.subtitulo && <p className="text-[11px] text-[#5d6678] dark:text-slate-400 mb-1.5">{item.subtitulo}</p>}
+      <div className="space-y-0.5 pt-1.5 border-t border-[#e2e6ef] dark:border-slate-800">
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[#5d6678]">Contestadas:</span>
-          <strong className="text-[#15803d]">{item.respondieron}</strong>
+          <span className="text-[#5d6678] dark:text-slate-400">Contestadas:</span>
+          <strong className="text-[#15803d] dark:text-emerald-400">{item.respondieron}</strong>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[#5d6678]">Pendientes:</span>
-          <strong className="text-[#b45309]">{item.pendientes}</strong>
+          <span className="text-[#5d6678] dark:text-slate-400">Pendientes:</span>
+          <strong className="text-[#b45309] dark:text-amber-400">{item.pendientes}</strong>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[#5d6678]">Total inscripciones:</span>
-          <span className="font-semibold text-[#1c2333]">{item.total}</span>
+          <span className="text-[#5d6678] dark:text-slate-400">Total inscripciones:</span>
+          <span className="font-semibold text-[#1c2333] dark:text-slate-100">{item.total}</span>
         </div>
       </div>
     </div>
@@ -105,6 +106,7 @@ function TooltipParticipacion({ active, payload }: TooltipContentProps) {
 /** Lista de participación: solo indica si cada alumno respondió, nunca qué respondió. */
 export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
   const { usuario, cerrarSesion } = useAuth()
+  const { isDark } = useTheme()
   const navigate = useNavigate()
   const [filas, setFilas] = useState<ParticipacionAPI[]>([])
   const [resumen, setResumen] = useState<ResumenParticipacion | null>(null)
@@ -367,36 +369,36 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
   const alumnosVisibles = mostrarTodosAlumnos ? alumnosFiltrados : alumnosFiltrados.slice(0, 10)
 
   const claseFiltro =
-    'w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e]'
+    'w-full sm:w-auto px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500'
 
   return (
     <>
       {/* Tarjetas KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#15803d]">{resumen?.respondieron ?? 0}</div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">Respondieron</div>
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#15803d] dark:text-emerald-400">{resumen?.respondieron ?? 0}</div>
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">Respondieron</div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#b45309]">{resumen?.pendientes ?? 0}</div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">Pendientes</div>
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#b45309] dark:text-amber-400">{resumen?.pendientes ?? 0}</div>
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">Pendientes</div>
         </div>
 
-        <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-extrabold text-[#0f766e]">{(resumen?.porcentaje ?? 0).toFixed(1)}%</div>
-          <div className="text-xs font-semibold text-[#5d6678] mt-1">% de Participación</div>
+        <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+          <div className="text-3xl font-extrabold text-[#0f766e] dark:text-teal-400">{(resumen?.porcentaje ?? 0).toFixed(1)}%</div>
+          <div className="text-xs font-semibold text-[#5d6678] dark:text-slate-400 mt-1">% de Participación</div>
         </div>
       </div>
 
       {/* Gráfico de Índice de Participación Estudiantil por Carrera / Materia */}
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-5 sm:p-6 shadow-xs mb-8 min-w-0">
+      <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs mb-8 min-w-0">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4">
           <div>
-            <h2 className="text-lg font-bold text-[#1c2333]">
+            <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">
               Índice de Participación por {modoGrafico === 'carrera' ? 'Carrera' : 'Materia'}
             </h2>
-            <p className="text-xs text-[#5d6678]">
+            <p className="text-xs text-[#5d6678] dark:text-slate-400">
               {modoGrafico === 'carrera'
                 ? carreraGrafico === 'todas'
                   ? 'Vista general del porcentaje de encuestas contestadas por carrera frente al índice general.'
@@ -409,7 +411,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
             <div
-              className="inline-flex rounded-xl border border-[#e2e6ef] bg-[#f4f6fb] p-1"
+              className="inline-flex rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb] dark:bg-slate-800 p-1"
               role="group"
               aria-label="Agrupación de participación"
             >
@@ -418,8 +420,8 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                 onClick={() => setModoGrafico('carrera')}
                 className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                   modoGrafico === 'carrera'
-                    ? 'bg-[#0f766e] text-white shadow-xs'
-                    : 'text-[#5d6678] hover:text-[#1c2333]'
+                    ? 'bg-[#0f766e] dark:bg-teal-600 text-white shadow-xs'
+                    : 'text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-200'
                 }`}
               >
                 Por Carrera
@@ -429,8 +431,8 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                 onClick={() => setModoGrafico('materia')}
                 className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                   modoGrafico === 'materia'
-                    ? 'bg-[#0f766e] text-white shadow-xs'
-                    : 'text-[#5d6678] hover:text-[#1c2333]'
+                    ? 'bg-[#0f766e] dark:bg-teal-600 text-white shadow-xs'
+                    : 'text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-200'
                 }`}
               >
                 Por Materia
@@ -443,7 +445,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                 value={carreraGrafico}
                 onChange={(e) => setCarreraGrafico(e.target.value)}
                 disabled={carrerasDisponibles.length === 0}
-                className="w-full sm:w-56 px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] disabled:opacity-60"
+                className="w-full sm:w-56 px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500 disabled:opacity-60"
               >
                 <option value="todas">Todas las carreras (General)</option>
                 {carrerasDisponibles.map((c) => (
@@ -458,7 +460,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                 value={materiaGrafico}
                 onChange={(e) => setMateriaGrafico(e.target.value)}
                 disabled={materiasGraficoDisponibles.length === 0}
-                className="w-full sm:w-64 px-3 py-2 rounded-xl border border-[#e2e6ef] bg-white text-xs font-semibold text-[#1c2333] focus:border-[#0f766e] disabled:opacity-60"
+                className="w-full sm:w-64 px-3 py-2 rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-[#1c2333] dark:text-slate-100 focus:border-[#0f766e] dark:focus:border-teal-500 disabled:opacity-60"
               >
                 {materiasGraficoDisponibles.length === 0 ? (
                   <option value="">Sin materias disponibles</option>
@@ -476,35 +478,35 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
 
         {/* Banda resumen contextual de la selección actual */}
         {!cargando && datosGrafico.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 p-3 rounded-xl bg-[#f4f6fb] border border-[#e2e6ef] text-xs">
-            <span className="font-bold text-[#1c2333]">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 p-3 rounded-xl bg-[#f4f6fb] dark:bg-slate-800/70 border border-[#e2e6ef] dark:border-slate-700 text-xs">
+            <span className="font-bold text-[#1c2333] dark:text-slate-100">
               {modoGrafico === 'carrera'
                 ? carreraGrafico === 'todas'
                   ? 'Resumen General:'
                   : `${carreraGrafico}:`
                 : `${materiaGrafico}:`}
             </span>
-            <span className="text-[#15803d] font-semibold">
+            <span className="text-[#15803d] dark:text-emerald-400 font-semibold">
               {resumenGrafico.respondieron} contestadas
             </span>
-            <span className="text-[#b45309] font-semibold">
+            <span className="text-[#b45309] dark:text-amber-400 font-semibold">
               {resumenGrafico.pendientes} pendientes
             </span>
-            <span className="text-[#5d6678]">
+            <span className="text-[#5d6678] dark:text-slate-400">
               de {resumenGrafico.total} inscripciones
             </span>
-            <span className="sm:ml-auto px-2.5 py-0.5 rounded-full bg-[#e3f4f2] text-[#0f766e] font-bold">
+            <span className="sm:ml-auto px-2.5 py-0.5 rounded-full bg-[#e3f4f2] dark:bg-teal-500/15 text-[#0f766e] dark:text-teal-300 font-bold">
               {resumenGrafico.porcentaje.toFixed(1)}% de avance
             </span>
           </div>
         )}
 
         {cargando ? (
-          <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] bg-[#f4f6fb]/60 text-xs text-[#5d6678]">
+          <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb]/60 dark:bg-slate-800/50 text-xs text-[#5d6678] dark:text-slate-400">
             Cargando datos de participación...
           </div>
         ) : datosGrafico.length === 0 ? (
-          <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] bg-[#f4f6fb]/60 text-xs text-[#5d6678] px-4 text-center">
+          <div className="h-64 flex items-center justify-center rounded-xl border border-dashed border-[#e2e6ef] dark:border-slate-700 bg-[#f4f6fb]/60 dark:bg-slate-800/50 text-xs text-[#5d6678] dark:text-slate-400 px-4 text-center">
             No hay registros de participación en el ciclo activo para graficar.
           </div>
         ) : (
@@ -518,11 +520,15 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
               >
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={datosGrafico} margin={{ top: 14, right: 16, left: -12, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ef" vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={isDark ? '#334155' : '#e2e6ef'}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="etiqueta"
-                      tick={{ fill: '#5d6678', fontSize: 11 }}
-                      axisLine={{ stroke: '#e2e6ef' }}
+                      tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                      axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                       tickLine={false}
                       interval={0}
                       angle={-15}
@@ -533,22 +539,26 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                       domain={[0, 100]}
                       ticks={[0, 25, 50, 75, 100]}
                       tickFormatter={(v) => `${v}%`}
-                      tick={{ fill: '#5d6678', fontSize: 11 }}
-                      axisLine={{ stroke: '#e2e6ef' }}
+                      tick={{ fill: isDark ? '#cbd5e1' : '#475569', fontSize: 11 }}
+                      axisLine={{ stroke: isDark ? '#334155' : '#e2e6ef' }}
                       tickLine={false}
                     />
                     <Tooltip
                       content={TooltipParticipacion}
-                      cursor={{ fill: '#e3f4f2', opacity: 0.45 }}
+                      cursor={
+                        isDark
+                          ? { fill: 'rgba(20, 184, 166, 0.12)' }
+                          : { fill: '#e3f4f2', opacity: 0.45 }
+                      }
                     />
                     {resumen && (
                       <ReferenceLine
                         y={resumen.porcentaje}
-                        stroke="#0f766e"
+                        stroke={isDark ? '#2dd4bf' : '#0f766e'}
                         strokeDasharray="4 4"
                         label={{
                           value: `General (${resumen.porcentaje.toFixed(1)}%)`,
-                          fill: '#0f766e',
+                          fill: isDark ? '#2dd4bf' : '#0f766e',
                           fontSize: 11,
                           position: 'insideTopRight',
                         }}
@@ -558,7 +568,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                       {datosGrafico.map((entry, idx) => (
                         <Cell
                           key={`${entry.tipo}-${entry.nombre}-${idx}`}
-                          fill={colorBarraParticipacion(entry)}
+                          fill={colorBarraParticipacion(entry, isDark)}
                         />
                       ))}
                     </Bar>
@@ -567,25 +577,25 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 pt-3 border-t border-[#e2e6ef] text-[11px] text-[#5d6678]">
-              <span className="inline-flex items-center gap-1.5 font-medium text-[#1c2333]">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e]" />
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3 pt-3 border-t border-[#e2e6ef] dark:border-slate-800 text-[11px] text-[#5d6678] dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5 font-medium text-[#1c2333] dark:text-slate-200">
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#0f766e] dark:bg-emerald-500" />
                 Índice General
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#0d9488] dark:bg-teal-500" />
                 Alto (&ge; 80%)
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#14b8a6] dark:bg-teal-400" />
                 Medio (50% – 79%)
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#d97706]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#d97706] dark:bg-amber-500" />
                 Bajo (1% – 49%)
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#dc2626]" />
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#dc2626] dark:bg-red-500" />
                 Sin respuestas (0%)
               </span>
             </div>
@@ -593,9 +603,9 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
         )}
       </div>
 
-      <div className="bg-white border border-[#e2e6ef] rounded-2xl p-6 shadow-xs mb-8">
+      <div className="bg-white dark:bg-slate-900 border border-[#e2e6ef] dark:border-slate-800 rounded-2xl p-6 shadow-xs mb-8">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-2">
-          <h2 className="text-lg font-bold text-[#1c2333]">Participación de alumnos</h2>
+          <h2 className="text-lg font-bold text-[#1c2333] dark:text-slate-100">Participación de alumnos</h2>
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <select value={crn} onChange={(e) => setCrn(e.target.value)} className={claseFiltro}>
               <option value="todas">Todas las materias</option>
@@ -625,7 +635,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                 onChange={(e) => setBusqueda(e.target.value)}
                 className={`w-full px-3.5 py-2 ${
                   busqueda ? 'pr-8' : ''
-                } rounded-xl border border-[#e2e6ef] bg-white text-xs text-[#1c2333] placeholder:text-[#5d6678]/70 focus:border-[#0f766e] focus:outline-none`}
+                } rounded-xl border border-[#e2e6ef] dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-[#1c2333] dark:text-slate-100 placeholder:text-[#5d6678]/70 dark:placeholder:text-slate-500 focus:border-[#0f766e] dark:focus:border-teal-500 focus:outline-none`}
               />
               {busqueda && (
                 <button
@@ -633,7 +643,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                   onClick={() => setBusqueda('')}
                   aria-label="Limpiar búsqueda de alumnos"
                   title="Limpiar búsqueda"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] hover:text-[#1c2333] hover:bg-[#f4f6fb] text-xs font-bold cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#5d6678] dark:text-slate-400 hover:text-[#1c2333] dark:hover:text-slate-100 hover:bg-[#f4f6fb] dark:hover:bg-slate-700 text-xs font-bold cursor-pointer"
                 >
                   ×
                 </button>
@@ -644,7 +654,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
               <button
                 type="button"
                 onClick={() => setMostrarTodosAlumnos((prev) => !prev)}
-                className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 bg-[#e3f4f2] hover:bg-[#0f766e] text-[#0f766e] hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-[#0f766e]/30 dark:border-teal-500/40 bg-[#e3f4f2] dark:bg-teal-500/15 hover:bg-[#0f766e] dark:hover:bg-teal-600 text-[#0f766e] dark:text-teal-300 hover:text-white dark:hover:text-white text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
               >
                 {mostrarTodosAlumnos
                   ? 'Mostrar menos (10)'
@@ -655,26 +665,26 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <p className="text-xs text-[#5d6678]">
+          <p className="text-xs text-[#5d6678] dark:text-slate-400">
             Solo se muestra si el alumno respondió. Las calificaciones y comentarios son anónimos y no se
             vinculan con el alumno.
           </p>
           {!cargando && alumnosFiltrados.length > 0 && (
-            <span className="text-[11px] font-medium text-[#5d6678]">
-              Mostrando <strong className="text-[#1c2333]">{alumnosVisibles.length}</strong> de{' '}
-              <strong className="text-[#1c2333]">{alumnosFiltrados.length}</strong> registros
+            <span className="text-[11px] font-medium text-[#5d6678] dark:text-slate-400">
+              Mostrando <strong className="text-[#1c2333] dark:text-slate-200">{alumnosVisibles.length}</strong> de{' '}
+              <strong className="text-[#1c2333] dark:text-slate-200">{alumnosFiltrados.length}</strong> registros
             </span>
           )}
         </div>
 
         {error && (
-          <p className="text-sm text-[#dc2626] font-medium bg-[#fee2e2] rounded-xl p-3 mb-4">{error}</p>
+          <p className="text-sm text-[#dc2626] dark:text-red-300 font-medium bg-[#fee2e2] dark:bg-red-950/50 border border-transparent dark:border-red-800/60 rounded-xl p-3 mb-4">{error}</p>
         )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-[#e2e6ef] text-[#5d6678] uppercase tracking-wider">
+              <tr className="border-b border-[#e2e6ef] dark:border-slate-800 text-[#5d6678] dark:text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-3 font-semibold">Matrícula</th>
                 <th className="py-3 px-3 font-semibold">Correo</th>
                 <th className="py-3 px-3 font-semibold">Materia (CRN)</th>
@@ -682,22 +692,22 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
                 <th className="py-3 px-3 font-semibold">Estado</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#e2e6ef]">
+            <tbody className="divide-y divide-[#e2e6ef] dark:divide-slate-800">
               {alumnosVisibles.map((f) => (
-                <tr key={`${f.matricula}-${f.crn}`} className="hover:bg-[#f4f6fb]/60 transition-colors">
-                  <td className="py-3 px-3 font-medium text-[#1c2333]">{f.matricula}</td>
-                  <td className="py-3 px-3 text-[#5d6678]">{f.correo}</td>
-                  <td className="py-3 px-3 text-[#1c2333]">
-                    {f.materia} <span className="text-[#5d6678]">({f.crn})</span>
+                <tr key={`${f.matricula}-${f.crn}`} className="hover:bg-[#f4f6fb]/60 dark:hover:bg-slate-800/60 transition-colors">
+                  <td className="py-3 px-3 font-medium text-[#1c2333] dark:text-slate-100">{f.matricula}</td>
+                  <td className="py-3 px-3 text-[#5d6678] dark:text-slate-400">{f.correo}</td>
+                  <td className="py-3 px-3 text-[#1c2333] dark:text-slate-200">
+                    {f.materia} <span className="text-[#5d6678] dark:text-slate-400">({f.crn})</span>
                   </td>
-                  <td className="py-3 px-3 text-[#1c2333]">{f.docente}</td>
+                  <td className="py-3 px-3 text-[#1c2333] dark:text-slate-200">{f.docente}</td>
                   <td className="py-3 px-3">
                     {f.respondio ? (
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#dcfce7] text-[#15803d] text-[11px] font-semibold">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#dcfce7] dark:bg-emerald-500/15 text-[#15803d] dark:text-emerald-300 text-[11px] font-semibold">
                         Respondió
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#fef3c7] text-[#b45309] text-[11px] font-semibold">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#fef3c7] dark:bg-amber-500/15 text-[#b45309] dark:text-amber-300 text-[11px] font-semibold">
                         Pendiente
                       </span>
                     )}
@@ -706,7 +716,7 @@ export default function ParticipacionAlumnos({ area, refresco = 0 }: Props) {
               ))}
               {(cargando || alumnosFiltrados.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[#5d6678]">
+                  <td colSpan={5} className="py-8 text-center text-[#5d6678] dark:text-slate-400">
                     {cargando ? 'Cargando...' : 'No se encontraron registros.'}
                   </td>
                 </tr>

@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from './router'
+import { ThemeProvider } from './context/ThemeContext'
 import RutaProtegida from './components/RutaProtegida'
 
 // Vista inicial
@@ -24,7 +25,8 @@ import ResetPassword from './pages/ResetPassword'
 
 export default function App() {
   return (
-    <Routes>
+    <ThemeProvider>
+      <Routes>
       <Route path="/" element={<Bienvenida />} />
 
       {/* ---------- RECUPERACIÓN DE CONTRASEÑA (PÚBLICAS) ---------- */}
@@ -95,6 +97,7 @@ export default function App() {
       />
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </ThemeProvider>
   )
 }
